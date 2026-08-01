@@ -1,0 +1,74 @@
+# Majestic APA ERP — Dokploy deployment (2 vCPU / 7.8 GB VPS)
+#
+# Images are built in GitHub Actions and pulled here. The server has
+# 2 cores shared with Dokploy and the staging site; building on it
+# would peg both for several minutes on every deploy.
+#
+# In Dokploy: Create Service -> Compose, add this as an extra compose
+# file alongside docker-compose.yml.
+services:
+  db:
+    networks: [internal]
+    expose: ["5432"]
+    # Tuned for a small box. Defaults assume far more RAM than we can spare.
+    command: >
+      postgres
+      -c shared_buffers=384MB
+      -c effective_cache_size=1GB
+      -c work_mem=8MB
+      -c maintenance_work_mem=96MB
+      -c max_connections=50
+    deploy:
+      resources:
+        limits: { memory: 1G }
+
+  redis:
+    networks: [internal]
+    expose: ["6379"]
+    command: redis-server --appendonly yes --maxmemory 192mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+  api:
+    build: !reset null
+    image: ghcr.io/OWNER/majestic-erp-api:latest
+    networks: [internal, dokploy-network]
+    expose: ["3000"]
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=768"
+    deploy:
+      resources:
+        limits: { memory: 1G }
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.mapa-api.rule=Host(`api.majesticpensionagent.tech`)"
+      - "traefik.http.routers.mapa-api.entrypoints=websecure"
+      - "traefik.http.routers.mapa-api.tls=true"
+      - "traefik.http.routers.mapa-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mapa-api.loadbalancer.server.port=3000"
+
+  web:
+    build: !reset null
+    image: ghcr.io/OWNER/majestic-erp-web:latest
+    networks: [internal, dokploy-network]
+    expose: ["80"]
+    deploy:
+      resources:
+        limits: { memory: 128M }
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.mapa-web.rule=Host(`erp.majesticpensionagent.tech`)"
+      - "traefik.http.routers.mapa-web.entrypoints=websecure"
+      - "traefik.http.routers.mapa-web.tls=true"
+      - "traefik.http.routers.mapa-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mapa-web.loadbalancer.server.port=80"
+
+networks:
+  internal:
+    driver: bridge
+  dokploy-network:
+    external: true

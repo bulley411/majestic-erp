@@ -1,0 +1,617 @@
+// Majestic APA Limited — ERP data model
+// Modelled directly on the Employee Data Form, File Documentation Checklist,
+// the July 2026 salary sheet and the Finance Officer Records workbook.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/* ============================== Access ============================== */
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  employee     Employee?
+  roles        UserRole[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  code        String           @unique // MD, HR_OFFICER, FINANCE_OFFICER, STAFF
+  name        String
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id    String           @id @default(uuid())
+  code  String           @unique // employee.read, payroll.approve, ledger.post
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+/// Append-only. Every mutation across the system writes one row.
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String // created | updated | posted | approved | reversed
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/* ============================ Org structure ========================= */
+
+model Department {
+  id        String     @id @default(uuid())
+  code      String     @unique
+  name      String // Info. Tech, Finance, Operations
+  headId    String?
+  employees Employee[]
+}
+
+model JobTitle {
+  id        String     @id @default(uuid())
+  name      String     @unique
+  employees Employee[]
+}
+
+/// Grade levels as used in your sheets: DM_2, etc.
+model GradeLevel {
+  id          String     @id @default(uuid())
+  code        String     @unique // DM_2
+  name        String // Deputy Manager, Step 2
+  rank        Int
+  defaultGross Decimal?  @db.Decimal(19, 4)
+  employees   Employee[]
+}
+
+/* ============================== Employee ============================ */
+
+enum EmploymentType {
+  PERMANENT
+  CONTRACT
+  TEMPORARY
+  OTHER
+}
+
+enum EmployeeStatus {
+  ONBOARDING
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  EXITED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+model Employee {
+  id       String @id @default(uuid())
+  /// Format: MAPA-<YY>-<TYPE>-<NNNN>  e.g. MAPA-26-PER-0008
+  staffId  String @unique
+  fileRef  String? @unique
+
+  // A. Personal information
+  firstName          String
+  middleName         String?
+  lastName           String
+  dateOfBirth        DateTime?
+  gender             Gender?
+  maritalStatus      MaritalStatus?
+  nationality        String?        @default("Nigerian")
+  stateOfOrigin      String?
+  localGovernmentArea String?
+  residentialAddress String?
+  phoneNumber        String?
+  personalEmail      String?
+  photoUrl           String?
+
+  // B. Employment information
+  departmentId   String?
+  jobTitleId     String?
+  gradeLevelId   String?
+  employmentType EmploymentType @default(PERMANENT)
+  status         EmployeeStatus @default(ONBOARDING)
+  dateOfEmployment DateTime?
+  /// From the Assumption of Duty Form — payroll activates from this date.
+  dateOfAssumption DateTime?
+  placeOfAssumption String?
+  supervisorId     String?
+  confirmedAt      DateTime?
+  exitDate         DateTime?
+  exitReason       String?
+
+  // C. Payroll and statutory information
+  bankName                String?
+  bankAccountName         String?
+  bankAccountNumber       String?
+  pensionFundAdministrator String?
+  rsaPin                  String?
+  taxIdentificationNumber String?
+  nhfNumber               String?
+  nhfEnrolled             Boolean @default(false)
+  /// Annual rent declared, used for rent relief in the PAYE computation.
+  annualRentPaid          Decimal? @db.Decimal(19, 4)
+  payrollRemarks          String?
+
+  // D/E. Next of kin and emergency contact
+  nextOfKinName         String?
+  nextOfKinRelationship String?
+  nextOfKinPhone        String?
+  nextOfKinAddress      String?
+  emergencyContactName         String?
+  emergencyContactRelationship String?
+  emergencyContactPhone        String?
+  emergencyContactAddress      String?
+
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id])
+
+  department Department? @relation(fields: [departmentId], references: [id])
+  jobTitle   JobTitle?   @relation(fields: [jobTitleId], references: [id])
+  gradeLevel GradeLevel? @relation(fields: [gradeLevelId], references: [id])
+  supervisor Employee?   @relation("Reports", fields: [supervisorId], references: [id])
+  reports    Employee[]  @relation("Reports")
+
+  compensations EmployeeCompensation[]
+  documents     EmployeeDocument[]
+  payslips      Payslip[]
+  leaveRequests LeaveRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId])
+  @@index([status])
+}
+
+/// Versioned pay. Never update a row — supersede it, so payslip history
+/// always reproduces from the compensation effective on the run date.
+model EmployeeCompensation {
+  id          String    @id @default(uuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  structureId String
+  structure   SalaryStructure @relation(fields: [structureId], references: [id])
+  /// Full monthly package, before the peculiar-allowance split.
+  totalPackage Decimal  @db.Decimal(19, 4)
+  /// Taxable payroll portion (your sheets: 60% of package).
+  monthlyGross Decimal  @db.Decimal(19, 4)
+  /// Non-taxable reimbursable portion (your Peculiar Allowance sheet).
+  peculiarAllowance Decimal @default(0) @db.Decimal(19, 4)
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  reason        String? // appointment, promotion, salary review
+  createdAt     DateTime @default(now())
+
+  @@index([employeeId, effectiveFrom])
+}
+
+/* ==================== Employee file documentation =================== */
+
+enum DocumentCategory {
+  PRE_EMPLOYMENT
+  ONBOARDING
+  LIFECYCLE
+  EXIT
+}
+
+/// The 26 rows of your Employee File Documentation Checklist.
+model DocumentType {
+  id        String           @id @default(uuid())
+  code      String           @unique
+  name      String
+  category  DocumentCategory
+  required  Boolean          @default(true)
+  sortOrder Int
+  documents EmployeeDocument[]
+}
+
+model EmployeeDocument {
+  id             String       @id @default(uuid())
+  employeeId     String
+  employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  documentTypeId String
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
+  fileUrl        String?
+  fileName       String?
+  fileSizeBytes  Int?
+  mimeType       String?
+  onFile         Boolean      @default(false)
+  checkedById    String?
+  checkedAt      DateTime?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  remarks        String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([employeeId, documentTypeId])
+}
+
+/* ============================== Payroll ============================= */
+
+model SalaryStructure {
+  id         String                   @id @default(uuid())
+  code       String                   @unique // MAPA-STD
+  name       String
+  isActive   Boolean                  @default(true)
+  components SalaryStructureComponent[]
+  compensations EmployeeCompensation[]
+}
+
+model SalaryStructureComponent {
+  id          String          @id @default(uuid())
+  structureId String
+  structure   SalaryStructure @relation(fields: [structureId], references: [id], onDelete: Cascade)
+  code        String // BASIC, HOUSING, TRANSPORT, UTILITY, MEAL
+  name        String
+  /// Fraction of gross. Components of one structure must sum to 1.
+  ratio       Decimal         @db.Decimal(9, 6)
+  pensionable Boolean         @default(false)
+  sortOrder   Int
+
+  @@unique([structureId, code])
+}
+
+/// PAYE bands, versioned by effective year. Nigeria Tax Act 2025 = 2026 set.
+model TaxBand {
+  id            String   @id @default(uuid())
+  effectiveYear Int
+  sortOrder     Int
+  /// null width = top open-ended band
+  width         Decimal? @db.Decimal(19, 4)
+  rate          Decimal  @db.Decimal(9, 6)
+
+  @@unique([effectiveYear, sortOrder])
+}
+
+enum PayrollRunStatus {
+  DRAFT       // accountant is still building it
+  PREPARED    // accountant submitted, awaiting Head of Finance
+  REVIEWED    // Head of Finance signed off, awaiting MD
+  APPROVED    // MD approved, ready to post
+  POSTED      // journal entry written to the ledger
+  PAID        // bank transfers confirmed
+  REJECTED    // sent back with reason; returns to DRAFT on rework
+}
+
+enum ApprovalAction {
+  PREPARE
+  REVIEW
+  APPROVE
+  REJECT
+  POST
+  MARK_PAID
+}
+
+/// Immutable sign-off trail. One row per transition, never updated.
+model PayrollApproval {
+  id        String         @id @default(uuid())
+  runId     String
+  run       PayrollRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  action    ApprovalAction
+  fromStatus PayrollRunStatus
+  toStatus   PayrollRunStatus
+  actorId   String
+  actorRole String
+  remarks   String?
+  createdAt DateTime       @default(now())
+
+  @@index([runId, createdAt])
+}
+
+model PayrollRun {
+  id          String           @id @default(uuid())
+  reference   String           @unique // MAPA/PAY/2026/07
+  periodYear  Int
+  periodMonth Int
+  status      PayrollRunStatus @default(DRAFT)
+  payslips    Payslip[]
+  totalGross    Decimal @default(0) @db.Decimal(19, 4)
+  totalNet      Decimal @default(0) @db.Decimal(19, 4)
+  totalPaye     Decimal @default(0) @db.Decimal(19, 4)
+  totalPensionEmployee Decimal @default(0) @db.Decimal(19, 4)
+  totalPensionEmployer Decimal @default(0) @db.Decimal(19, 4)
+  preparedById String?
+  preparedAt   DateTime?
+  reviewedById String?
+  reviewedAt   DateTime?
+  approvedById String?
+  approvedAt   DateTime?
+  postedById   String?
+  postedAt     DateTime?
+  rejectionReason String?
+  approvals    PayrollApproval[]
+  journalEntryId String?  @unique
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([periodYear, periodMonth])
+}
+
+model Payslip {
+  id         String     @id @default(uuid())
+  runId      String
+  run        PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+
+  monthlyGross        Decimal @db.Decimal(19, 4)
+  basicSalary         Decimal @db.Decimal(19, 4)
+  housingAllowance    Decimal @db.Decimal(19, 4)
+  transportAllowance  Decimal @db.Decimal(19, 4)
+  utilityAllowance    Decimal @db.Decimal(19, 4)
+  mealAllowance       Decimal @db.Decimal(19, 4)
+  adjustmentPlus      Decimal @default(0) @db.Decimal(19, 4)
+
+  paye                Decimal @db.Decimal(19, 4)
+  pensionEmployee     Decimal @db.Decimal(19, 4)
+  pensionEmployer     Decimal @db.Decimal(19, 4)
+  nhf                 Decimal @default(0) @db.Decimal(19, 4)
+  loanRepayment       Decimal @default(0) @db.Decimal(19, 4)
+  adjustmentMinus     Decimal @default(0) @db.Decimal(19, 4)
+  totalDeductions     Decimal @db.Decimal(19, 4)
+  netPay              Decimal @db.Decimal(19, 4)
+
+  peculiarAllowance   Decimal @default(0) @db.Decimal(19, 4)
+
+  /// Snapshot of the inputs so an old payslip always reproduces.
+  computationSnapshot Json
+
+  @@unique([runId, employeeId])
+}
+
+/* =============================== Leave ============================== */
+
+model LeaveType {
+  id             String  @id @default(uuid())
+  code           String  @unique
+  name           String
+  annualEntitlement Int
+  requiresApproval Boolean @default(true)
+  requests       LeaveRequest[]
+}
+
+enum LeaveStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model LeaveRequest {
+  id          String      @id @default(uuid())
+  employeeId  String
+  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveTypeId String
+  leaveType   LeaveType   @relation(fields: [leaveTypeId], references: [id])
+  startDate   DateTime
+  endDate     DateTime
+  days        Int
+  reason      String?
+  status      LeaveStatus @default(DRAFT)
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@index([employeeId, startDate])
+}
+
+/* ============================== Ledger ============================== */
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+model Account {
+  id       String        @id @default(uuid())
+  code     String        @unique // 1200
+  name     String // Accounts Receivable
+  type     AccountType
+  parentId String?
+  parent   Account?      @relation("AccountTree", fields: [parentId], references: [id])
+  children Account[]     @relation("AccountTree")
+  isActive Boolean       @default(true)
+  lines    JournalLine[]
+  bank     Bank?
+}
+
+model Bank {
+  id        String  @id @default(uuid())
+  name      String  @unique // Access, Globus, Keystone, Summit
+  accountNumber String?
+  accountId String  @unique
+  account   Account @relation(fields: [accountId], references: [id])
+  vouchers  Voucher[]
+}
+
+enum EntryStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+model FiscalPeriod {
+  id       String   @id @default(uuid())
+  year     Int
+  month    Int
+  isClosed Boolean  @default(false)
+  closedAt DateTime?
+  entries  JournalEntry[]
+
+  @@unique([year, month])
+}
+
+model JournalEntry {
+  id          String       @id @default(uuid())
+  reference   String       @unique
+  date        DateTime
+  narration   String
+  /// What produced this entry: voucher | payroll_run | invoice | manual
+  sourceType  String
+  sourceId    String?
+  status      EntryStatus  @default(DRAFT)
+  periodId    String
+  period      FiscalPeriod @relation(fields: [periodId], references: [id])
+  lines       JournalLine[]
+  /// Set on the reversing entry, pointing at what it reverses.
+  reversesId  String?      @unique
+  reverses    JournalEntry? @relation("Reversal", fields: [reversesId], references: [id])
+  reversedBy  JournalEntry? @relation("Reversal")
+  postedById  String?
+  postedAt    DateTime?
+  payrollRun  PayrollRun?
+  createdAt   DateTime     @default(now())
+
+  @@index([date])
+  @@index([sourceType, sourceId])
+}
+
+model JournalLine {
+  id        String       @id @default(uuid())
+  entryId   String
+  entry     JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  accountId String
+  account   Account      @relation(fields: [accountId], references: [id])
+  debit     Decimal      @default(0) @db.Decimal(19, 4)
+  credit    Decimal      @default(0) @db.Decimal(19, 4)
+  narration String?
+  sortOrder Int          @default(0)
+
+  @@index([accountId])
+  @@index([entryId])
+}
+
+/* ============================== Vouchers ============================ */
+
+enum VoucherStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  REJECTED
+}
+
+/// Your Finance Officer Records "Expenses" sheet, as a first-class document.
+model Voucher {
+  id           String        @id @default(uuid())
+  /// MAPA/VCH/2026/001
+  voucherNo    String        @unique
+  date         DateTime
+  description  String
+  categoryId   String?
+  category     ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  amount       Decimal       @db.Decimal(19, 4)
+  /// Withholding tax deducted at source.
+  whtRate      Decimal       @default(0) @db.Decimal(9, 6)
+  whtAmount    Decimal       @default(0) @db.Decimal(19, 4)
+  netAmount    Decimal       @db.Decimal(19, 4)
+  bankId       String?
+  bank         Bank?         @relation(fields: [bankId], references: [id])
+  beneficiary  String
+  beneficiaryAccountNo String?
+  status       VoucherStatus @default(DRAFT)
+  raisedById   String?
+  approvedById String?
+  approvedAt   DateTime?
+  /// Role required to approve, resolved from the amount when raised.
+  requiredApproverRole String?
+  rejectionReason String?
+  approvals    VoucherApproval[]
+  createdAt    DateTime      @default(now())
+
+  @@index([date])
+  @@index([status])
+}
+
+/// Who may approve what, by amount. Configurable data, not code.
+/// Rank orders authority: the required approver for an amount is the
+/// lowest rank whose limit covers it. Anyone at or above that rank may
+/// also approve, so the MD can always act in the ED's place.
+model ApprovalLimit {
+  id            String    @id @default(uuid())
+  roleCode      String    // ED, MD
+  rank          Int       // ED = 1, MD = 2
+  documentType  String    // VOUCHER
+  /// Maximum amount this role may approve. null = unlimited.
+  maxAmount     Decimal?  @db.Decimal(19, 4)
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+
+  @@index([documentType, effectiveFrom])
+}
+
+/// Immutable sign-off trail for vouchers, mirroring PayrollApproval.
+model VoucherApproval {
+  id         String        @id @default(uuid())
+  voucherId  String
+  voucher    Voucher       @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  action     String        // RAISE | APPROVE | REJECT | PAY
+  fromStatus VoucherStatus
+  toStatus   VoucherStatus
+  actorId    String
+  actorRole  String
+  /// The limit rule applied, so the decision stays auditable even if
+  /// the threshold is changed afterwards.
+  limitApplied Decimal?    @db.Decimal(19, 4)
+  remarks    String?
+  createdAt  DateTime      @default(now())
+
+  @@index([voucherId, createdAt])
+}
+
+model ExpenseCategory {
+  id       String    @id @default(uuid())
+  code     String    @unique
+  name     String // Startup cost, Utilities, Professional fees
+  accountId String?
+  vouchers Voucher[]
+}

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People — Majestic APA ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B2239;
+  --ink-2:#13324F;
+  --ink-3:#1D4266;
+  --brass:#B8862B;
+  --brass-lite:#E8C87A;
+  --paper:#EEF2F6;
+  --surface:#FFFFFF;
+  --line:#D8E0E8;
+  --line-soft:#E7EDF3;
+  --slate:#5D7085;
+  --slate-2:#8A9AAA;
+  --emerald:#0E7C5A;
+  --amber:#9A6B08;
+  --rose:#A8352C;
+  --r:6px;
+  --rail:236px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  background:var(--paper);color:var(--ink);
+  font-size:14px;line-height:1.5;
+}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.disp{font-family:'Archivo',sans-serif;letter-spacing:-0.02em}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:var(--rail) 1fr;min-height:100vh}
+
+/* ---------- left rail ---------- */
+.rail{background:var(--ink);color:#B9C7D6;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:20px 18px 18px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;gap:11px;align-items:center}
+.crest{width:32px;height:32px;border-radius:4px;background:linear-gradient(160deg,var(--brass),#8E6716);
+  display:grid;place-items:center;color:#1A1200;font-family:'Archivo';font-weight:700;font-size:14px;flex:none}
+.brand h1{font-family:'Archivo';font-size:14px;font-weight:600;color:#fff;letter-spacing:-.01em;line-height:1.15}
+.brand span{display:block;font-size:10px;font-weight:400;color:var(--brass-lite);letter-spacing:.09em;text-transform:uppercase;margin-top:2px}
+
+.navgroup{padding:16px 10px 4px}
+.navgroup > p{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#5D7A96;padding:0 8px 7px;font-weight:600}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:var(--r);
+  color:#B9C7D6;text-decoration:none;font-size:13px;position:relative}
+.nav a:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav a.on{background:var(--ink-3);color:#fff;font-weight:500}
+.nav a.on::before{content:"";position:absolute;left:-10px;top:6px;bottom:6px;width:2px;background:var(--brass);border-radius:0 2px 2px 0}
+.ic{width:15px;height:15px;flex:none;opacity:.85}
+.railfoot{margin-top:auto;padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:10px;align-items:center}
+.railfoot .av{width:28px;height:28px;border-radius:50%;background:var(--ink-3);display:grid;place-items:center;
+  font-size:11px;font-weight:600;color:var(--brass-lite);flex:none}
+.railfoot b{display:block;font-size:12px;color:#fff;font-weight:500}
+.railfoot small{font-size:11px;color:#6E8AA5}
+
+/* ---------- main ---------- */
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--line);padding:16px 26px 0;position:sticky;top:0;z-index:5}
+.crumb{font-size:11px;color:var(--slate-2);letter-spacing:.05em;text-transform:uppercase;font-weight:500}
+.titlerow{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:5px}
+h2.page{font-family:'Archivo';font-size:25px;font-weight:600;letter-spacing:-.025em}
+.count{font-size:12px;color:var(--slate);margin-left:9px;font-weight:400;font-family:'IBM Plex Sans'}
+.acts{display:flex;gap:8px;padding-bottom:2px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:7px 13px;
+  font:500 13px 'IBM Plex Sans';color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:7px}
+.btn:hover{border-color:var(--slate-2)}
+.btn.pri{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.pri:hover{background:var(--ink-2)}
+
+/* tabs with the gold rule lifted from the MAPA forms */
+.tabs{display:flex;gap:2px;margin-top:15px}
+.tab{padding:9px 14px;font-size:13px;color:var(--slate);cursor:pointer;border-bottom:2px solid transparent;font-weight:500}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);border-bottom-color:var(--brass)}
+
+/* ---------- filter strip ---------- */
+.filters{background:var(--surface);border-bottom:1px solid var(--line);padding:11px 26px;
+  display:flex;gap:9px;align-items:center;flex-wrap:wrap;position:sticky;top:129px;z-index:4}
+.search{flex:1;min-width:190px;max-width:330px;position:relative}
+.search input{width:100%;border:1px solid var(--line);border-radius:var(--r);padding:7px 11px 7px 32px;
+  font:400 13px 'IBM Plex Sans';background:var(--paper)}
+.search input:focus{outline:none;border-color:var(--ink-3);background:#fff;box-shadow:0 0 0 3px rgba(29,66,102,.09)}
+.search svg{position:absolute;left:10px;top:9px;color:var(--slate-2)}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:5px 12px;
+  font:500 12px 'IBM Plex Sans';color:var(--slate);cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:var(--slate-2);color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip b{font-weight:500;opacity:.55;margin-left:5px}
+.spacer{flex:1}
+.viewtog{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.viewtog button{border:0;background:var(--surface);padding:6px 9px;cursor:pointer;color:var(--slate-2);display:grid;place-items:center}
+.viewtog button.on{background:var(--ink);color:#fff}
+
+/* ---------- grid ---------- */
+.body{padding:20px 26px 40px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(316px,1fr));gap:14px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:0;overflow:hidden;
+  position:relative;cursor:pointer;transition:border-color .14s, box-shadow .14s, transform .14s}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:transparent;transition:background .14s}
+.card:hover{border-color:var(--slate-2);box-shadow:0 5px 18px -8px rgba(11,34,57,.32);transform:translateY(-1px)}
+.card:hover::before{background:var(--brass)}
+
+.chead{display:flex;gap:12px;padding:15px 16px 13px}
+.av{width:46px;height:46px;border-radius:7px;flex:none;display:grid;place-items:center;
+  font-family:'Archivo';font-weight:600;font-size:16px;letter-spacing:-.01em;
+  background:var(--ink);color:var(--brass-lite);position:relative}
+.av.a1{background:#123A5C}.av.a2{background:#1E4A3C}.av.a3{background:#4A3218}
+.av.a4{background:#3D2440}.av.a5{background:#0E3F4A}
+.who{min-width:0;flex:1}
+.who h3{font-family:'Archivo';font-size:15px;font-weight:600;letter-spacing:-.015em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.who p{font-size:12.5px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.sid{font-size:11px;color:var(--slate-2);margin-top:5px;letter-spacing:.02em}
+.dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.dot.active{background:var(--emerald)}
+.dot.leave{background:var(--amber)}
+.dot.onboarding{background:#2D6FB8}
+
+.meta{display:flex;gap:6px;padding:0 16px 13px;flex-wrap:wrap}
+.tag{font-size:11px;padding:2.5px 8px;border-radius:4px;background:var(--paper);color:var(--ink-2);
+  border:1px solid var(--line-soft);font-weight:500;white-space:nowrap}
+.tag.gl{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.03em;background:#FBF4E4;
+  border-color:#EBDCB8;color:#7A5A12}
+
+/* the signature: employee file completeness, from the MAPA checklist */
+.filebar{border-top:1px solid var(--line-soft);background:#FAFCFD;padding:10px 16px 11px}
+.filebar .lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.filebar .lbl span{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate-2);font-weight:600}
+.filebar .lbl b{font-family:'IBM Plex Mono';font-size:11px;font-weight:500;color:var(--ink)}
+.filebar .lbl b.warn{color:var(--rose)}
+.segs{display:flex;gap:8px;align-items:flex-end}
+.seggrp{display:flex;gap:1.5px}
+.seg{width:100%;flex:1;min-width:3px;height:13px;border-radius:1px;background:#DDE5EC}
+.seg.on{background:var(--brass)}
+.seg.na{background:transparent;border:1px dashed #CBD5DE;height:13px}
+.grpA{flex:6}.grpB{flex:10}.grpC{flex:6}.grpD{flex:6}
+
+.foot{display:flex;justify-content:space-between;align-items:center;padding:9px 16px 10px;
+  border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--slate)}
+.foot .pay{font-family:'IBM Plex Mono';font-size:12px;color:var(--ink);font-weight:500}
+.foot .pay small{color:var(--slate-2);font-weight:400;font-size:10px;margin-left:3px}
+
+/* ---------- legend ---------- */
+.legend{margin-top:18px;padding:13px 16px;background:var(--surface);border:1px solid var(--line);
+  border-radius:9px;display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+.legend h4{font-family:'Archivo';font-size:12px;font-weight:600;letter-spacing:-.01em;padding-right:6px;
+  border-right:1px solid var(--line);padding-right:22px}
+.lgi{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--slate)}
+.lgs{display:flex;gap:1.5px}
+.lgs i{width:4px;height:11px;border-radius:1px;background:var(--brass);display:block}
+.lgs i.off{background:#DDE5EC}
+.lgs i.na{background:transparent;border:1px dashed #CBD5DE}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ rail ============ -->
+  <aside class="rail">
+    <div class="brand">
+      <div class="crest">M</div>
+      <div>
+        <h1>Majestic APA</h1>
+        <span>Limited</span>
+      </div>
+    </div>
+
+    <div class="navgroup">
+      <p>Overview</p>
+      <nav class="nav">
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+      </nav>
+    </div>
+
+    <div class="navgroup">
+      <p>People</p>
+      <nav class="nav">
+        <a href="#" class="on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>Employees</a>
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Leave &amp; attendance</a>
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>Employee files</a>
+      </nav>
+    </div>
+
+    <div class="navgroup">
+      <p>Payroll</p>
+      <nav class="nav">
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg>Monthly runs</a>
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>PAYE &amp; pension</a>
+      </nav>
+    </div>
+
+    <div class="navgroup">
+      <p>Finance</p>
+      <nav class="nav">
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 9v11"/></svg>General ledger</a>
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Vouchers</a>
+        <a href="#"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Reports</a>
+      </nav>
+    </div>
+
+    <div class="railfoot">
+      <div class="av">JK</div>
+      <div>
+        <b>Joel G. Kure</b>
+        <small>Managing Director</small>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ main ============ -->
+  <main class="main">
+    <header class="topbar">
+      <div class="crumb">People</div>
+      <div class="titlerow">
+        <h2 class="page">Employees<span class="count">15 on record · 14 active</span></h2>
+        <div class="acts">
+          <button class="btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export
+          </button>
+          <button class="btn pri">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Add employee
+          </button>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab on">Directory</div>
+        <div class="tab">Org chart</div>
+        <div class="tab">File audit</div>
+        <div class="tab">Exits</div>
+      </div>
+    </header>
+
+    <div class="filters">
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="Search name, staff ID, RSA PIN…">
+      </div>
+      <div class="chip on">All<b>15</b></div>
+      <div class="chip">Info. Tech<b>3</b></div>
+      <div class="chip">Finance<b>3</b></div>
+      <div class="chip">Operations<b>4</b></div>
+      <div class="chip">Business Dev.<b>2</b></div>
+      <div class="chip">Compliance<b>2</b></div>
+      <div class="chip">Admin / HR<b>1</b></div>
+      <div class="spacer"></div>
+      <div class="viewtog">
+        <button class="on" title="Card view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></button>
+        <button title="List view"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="grid" id="grid"></div>
+
+      <div class="legend">
+        <h4>Employee file</h4>
+        <div class="lgi"><span class="lgs"><i></i><i></i><i></i></span> On file</div>
+        <div class="lgi"><span class="lgs"><i class="off"></i><i class="off"></i><i class="off"></i></span> Missing</div>
+        <div class="lgi"><span class="lgs"><i class="na"></i><i class="na"></i><i class="na"></i></span> Not applicable</div>
+        <div class="lgi" style="color:var(--slate-2)">Groups: pre-employment · onboarding · lifecycle · exit</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// 28 checklist items, grouped exactly as the MAPA Employee File
+// Documentation Checklist: A=6, B=10, C=6, D=6
+const GROUPS = [6, 10, 6, 6];
+
+const staff = [
+  {n:"Aminu Ahmad",       t:"Info. Tech",           d:"Info. Tech",     gl:"DM_2",  id:"MAPA-26-PER-0008", s:"active",     pay:195000, f:[6,10,4,0], av:"a1"},
+  {n:"Joel Godson Kure",  t:"Managing Director",    d:"Operations",     gl:"MD_1",  id:"MAPA-26-PER-0001", s:"active",     pay:850000, f:[6,10,6,0], av:"a2"},
+  {n:"Ngozi Okafor",      t:"Finance Officer",      d:"Finance",        gl:"SM_1",  id:"MAPA-26-PER-0002", s:"active",     pay:420000, f:[6,10,5,0], av:"a3"},
+  {n:"Halima Suleiman",   t:"HR & Admin Officer",   d:"Admin / HR",     gl:"M_2",   id:"MAPA-26-PER-0003", s:"active",     pay:310000, f:[6,9,4,0],  av:"a4"},
+  {n:"Chukwuemeka Eze",   t:"Compliance Officer",   d:"Compliance",     gl:"M_1",   id:"MAPA-26-PER-0004", s:"active",     pay:295000, f:[6,10,3,0], av:"a5"},
+  {n:"Fatima Bello",      t:"Client Relations",     d:"Operations",     gl:"O_3",   id:"MAPA-26-PER-0005", s:"active",     pay:180000, f:[5,8,2,0],  av:"a1"},
+  {n:"Tunde Adeyemi",     t:"Business Development", d:"Business Dev.",  gl:"AM_1",  id:"MAPA-26-PER-0006", s:"active",     pay:260000, f:[6,10,4,0], av:"a2"},
+  {n:"Grace Nwachukwu",   t:"Accounts Assistant",   d:"Finance",        gl:"O_2",   id:"MAPA-26-PER-0007", s:"active",     pay:165000, f:[4,7,1,0],  av:"a3"},
+  {n:"Ibrahim Musa",      t:"Systems Analyst",      d:"Info. Tech",     gl:"AM_2",  id:"MAPA-26-CON-0009", s:"active",     pay:240000, f:[6,10,3,0], av:"a4"},
+  {n:"Blessing Etim",     t:"Pension Administrator",d:"Operations",     gl:"O_3",   id:"MAPA-26-PER-0010", s:"leave",      pay:190000, f:[6,10,5,0], av:"a5"},
+  {n:"Yusuf Danladi",     t:"Internal Auditor",     d:"Compliance",     gl:"M_2",   id:"MAPA-26-PER-0011", s:"active",     pay:305000, f:[6,9,3,0],  av:"a1"},
+  {n:"Adaeze Obi",        t:"Marketing Executive",  d:"Business Dev.",  gl:"O_3",   id:"MAPA-26-PER-0012", s:"active",     pay:185000, f:[5,9,2,0],  av:"a2"},
+  {n:"Sani Abubakar",     t:"Operations Officer",   d:"Operations",     gl:"O_2",   id:"MAPA-26-CON-0013", s:"active",     pay:170000, f:[6,8,2,0],  av:"a3"},
+  {n:"Chidinma Uche",     t:"Payroll Assistant",    d:"Finance",        gl:"O_2",   id:"MAPA-26-PER-0014", s:"active",     pay:175000, f:[6,10,3,0], av:"a4"},
+  {n:"Peter Ojo",         t:"IT Support",           d:"Info. Tech",     gl:"O_1",   id:"MAPA-26-TMP-0015", s:"onboarding", pay:140000, f:[3,4,0,0],  av:"a5"},
+];
+
+const naira = n => "₦" + n.toLocaleString("en-NG");
+const initials = n => n.split(" ").filter(Boolean).slice(0,2).map(w=>w[0]).join("");
+const STATUS = {active:"Active", leave:"On leave", onboarding:"Onboarding"};
+
+function segments(filled, exited){
+  return GROUPS.map((size, gi) => {
+    const on = filled[gi];
+    const cls = ["grpA","grpB","grpC","grpD"][gi];
+    // Exit records are not applicable while an employee is still serving.
+    const na = gi === 3 && !exited;
+    const bars = Array.from({length:size}, (_, i) =>
+      `<span class="seg ${na ? "na" : (i < on ? "on" : "")}"></span>`).join("");
+    return `<span class="seggrp ${cls}">${bars}</span>`;
+  }).join("");
+}
+
+document.getElementById("grid").innerHTML = staff.map(e => {
+  const applicable = GROUPS[0] + GROUPS[1] + GROUPS[2];   // exit not counted
+  const have = e.f[0] + e.f[1] + e.f[2];
+  const short = applicable - have;
+  return `
+  <article class="card">
+    <div class="chead">
+      <div class="av ${e.av}">${initials(e.n)}</div>
+      <div class="who">
+        <h3>${e.n}</h3>
+        <p>${e.t}</p>
+        <div class="sid mono"><span class="dot ${e.s}"></span>${e.id}</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="tag">${e.d}</span>
+      <span class="tag gl">${e.gl}</span>
+      <span class="tag">${STATUS[e.s]}</span>
+    </div>
+    <div class="filebar">
+      <div class="lbl">
+        <span>Employee file</span>
+        <b class="${short > 4 ? "warn" : ""}">${have}/${applicable}${short ? ` · ${short} missing` : " · complete"}</b>
+      </div>
+      <div class="segs">${segments(e.f, false)}</div>
+    </div>
+    <div class="foot">
+      <span>Monthly gross</span>
+      <span class="pay">${naira(e.pay)}<small>/mo</small></span>
+    </div>
+  </article>`;
+}).join("");
+</script>
+</body>
+</html>

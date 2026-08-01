@@ -1,0 +1,29 @@
+# Local development only. Docker Compose loads this automatically.
+# Ports are published here and ONLY here — on the VPS, Traefik handles
+# all ingress and nothing should be exposed directly.
+services:
+  db:
+    ports: ["5432:5432"]
+
+  redis:
+    ports: ["6379:6379"]
+
+  api:
+    build:
+      target: development
+    command: pnpm --filter @mapa/api dev
+    ports: ["3000:3000"]
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./packages:/app/packages
+      - /app/node_modules
+
+  web:
+    build:
+      target: development
+    command: pnpm --filter @mapa/web dev --host
+    ports: ["5173:5173"]
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      - /app/node_modules

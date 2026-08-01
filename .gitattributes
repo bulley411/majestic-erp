@@ -1,0 +1,14 @@
+# Normalise line endings. Without this, files committed from Windows carry
+# CRLF into the Linux containers, where shell scripts and some tooling break.
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary
+*.xlsx binary
+*.gz  binary
