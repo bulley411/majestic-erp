@@ -4,6 +4,8 @@
 
 -- 1. A line is either a debit or a credit, never both, never negative.
 ALTER TABLE "JournalLine"
+  DROP CONSTRAINT IF EXISTS journalline_sign_check;
+ALTER TABLE "JournalLine"
   ADD CONSTRAINT journalline_sign_check
   CHECK (debit >= 0 AND credit >= 0 AND NOT (debit > 0 AND credit > 0));
 
@@ -29,6 +31,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS journalline_balance_check ON "JournalLine";
 CREATE CONSTRAINT TRIGGER journalline_balance_check
   AFTER INSERT OR UPDATE ON "JournalLine"
   DEFERRABLE INITIALLY DEFERRED
@@ -44,6 +47,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS journalentry_immutable ON "JournalEntry";
 CREATE TRIGGER journalentry_immutable
   BEFORE UPDATE ON "JournalEntry"
   FOR EACH ROW EXECUTE FUNCTION forbid_posted_mutation();
@@ -61,6 +65,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS journalline_immutable ON "JournalLine";
 CREATE TRIGGER journalline_immutable
   BEFORE UPDATE OR DELETE ON "JournalLine"
   FOR EACH ROW EXECUTE FUNCTION forbid_posted_line_mutation();
@@ -77,6 +82,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS journalentry_period_open ON "JournalEntry";
 CREATE TRIGGER journalentry_period_open
   BEFORE INSERT OR UPDATE ON "JournalEntry"
   FOR EACH ROW EXECUTE FUNCTION forbid_closed_period();

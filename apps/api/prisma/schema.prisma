@@ -11,7 +11,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* ============================== Access ============================== */
+// ============================== Access ==============================
 
 model User {
   id           String    @id @default(uuid())
@@ -73,7 +73,7 @@ model AuditLog {
   @@index([createdAt])
 }
 
-/* ============================ Org structure ========================= */
+// ============================ Org structure =========================
 
 model Department {
   id        String     @id @default(uuid())
@@ -99,7 +99,7 @@ model GradeLevel {
   employees   Employee[]
 }
 
-/* ============================== Employee ============================ */
+// ============================== Employee ============================
 
 enum EmploymentType {
   PERMANENT
@@ -230,7 +230,7 @@ model EmployeeCompensation {
   @@index([employeeId, effectiveFrom])
 }
 
-/* ==================== Employee file documentation =================== */
+// ==================== Employee file documentation ===================
 
 enum DocumentCategory {
   PRE_EMPLOYMENT
@@ -271,7 +271,7 @@ model EmployeeDocument {
   @@unique([employeeId, documentTypeId])
 }
 
-/* ============================== Payroll ============================= */
+// ============================== Payroll =============================
 
 model SalaryStructure {
   id         String                   @id @default(uuid())
@@ -404,7 +404,7 @@ model Payslip {
   @@unique([runId, employeeId])
 }
 
-/* =============================== Leave ============================== */
+// =============================== Leave ==============================
 
 model LeaveType {
   id             String  @id @default(uuid())
@@ -441,7 +441,7 @@ model LeaveRequest {
   @@index([employeeId, startDate])
 }
 
-/* ============================== Ledger ============================== */
+// ============================== Ledger ==============================
 
 enum AccountType {
   ASSET
@@ -530,7 +530,7 @@ model JournalLine {
   @@index([entryId])
 }
 
-/* ============================== Vouchers ============================ */
+// ============================== Vouchers ============================
 
 enum VoucherStatus {
   DRAFT
