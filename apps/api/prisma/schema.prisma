@@ -21,8 +21,43 @@ model User {
   lastLoginAt  DateTime?
   employee     Employee?
   roles        UserRole[]
+  refreshTokens RefreshToken[]
+  /// Set when an admin creates the account; forces a change on first login.
+  mustChangePassword Boolean @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+/// Refresh tokens, stored hashed. One row per active session.
+/// Rotated on every refresh: using an old token revokes the whole family,
+/// which is how a stolen token gets caught.
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  /// Rotation chain. A reused token invalidates every token sharing this id.
+  familyId   String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedById String?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+/// Failed login attempts, for lockout. Cleared on success.
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  ipAddress String?
+  succeeded Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
 }
 
 model Role {

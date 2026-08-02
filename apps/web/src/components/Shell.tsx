@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useAuth } from '../lib/auth-context';
 
 const NAV = [
   { group: 'Overview', items: [{ label: 'Dashboard', on: false }] },
@@ -28,6 +29,10 @@ const NAV = [
 ];
 
 export default function Shell({ children }: { children: ReactNode }) {
+  const { user, signOut } = useAuth();
+  const label = user?.email.split('@')[0] ?? '';
+  const initials = label.slice(0, 2).toUpperCase();
+
   return (
     <div className="app">
       <aside className="rail">
@@ -53,11 +58,17 @@ export default function Shell({ children }: { children: ReactNode }) {
         ))}
 
         <div className="railfoot">
-          <div className="av">SM</div>
-          <div>
-            <b>Suleiman</b>
-            <small>Administrator</small>
+          <div className="av">{initials}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <b style={{ textTransform: 'capitalize' }}>{label}</b>
+            <small>{user?.roles.join(', ')}</small>
           </div>
+          <button className="signout" onClick={() => signOut()} title="Sign out">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="1.8">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+          </button>
         </div>
       </aside>
 
