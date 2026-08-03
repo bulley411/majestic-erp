@@ -7,3 +7,4 @@ dist/
 .turbo/
 uploads/
 *.tsbuildinfo
+packages/shared/dist/
