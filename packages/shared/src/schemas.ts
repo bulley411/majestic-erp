@@ -46,6 +46,7 @@ export const employeeCreateSchema = z.object({
   staffId: z.string().regex(/^MAPA-\d{2}-[A-Z]{3}-\d{4}$/, 'Format: MAPA-26-PER-0008'),
   firstName: z.string().min(1, 'Required'),
   middleName: optionalText,
+  lastName: z.string().min(1, 'Required'),
   dateOfBirth: optional(z.coerce.date()),
   gender: optional(z.enum(['MALE', 'FEMALE'])),
   maritalStatus: optional(z.enum(['SINGLE', 'MARRIED', 'DIVORCED', 'WIDOWED'])),
