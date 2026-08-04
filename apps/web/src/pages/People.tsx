@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listEmployees, type Employee } from '../lib/api';
+import { useAuth } from '../lib/auth-context';
+import EmployeeForm from './EmployeeForm';
+import Avatar from '../components/Avatar';
 
 const CATEGORIES = ['PRE_EMPLOYMENT', 'ONBOARDING', 'LIFECYCLE', 'EXIT'] as const;
 const GROUP_CLASS: Record<string, string> = {
@@ -56,11 +59,20 @@ function FileMeter({ employee }: { employee: Employee }) {
   );
 }
 
-function Card({ employee, tone }: { employee: Employee; tone: string }) {
+function Card({ employee, tone, onOpen }: {
+  employee: Employee; tone: string; onOpen: () => void;
+}) {
   return (
-    <article className="card" tabIndex={0}>
+    <article
+      className="card"
+      tabIndex={0}
+      role="button"
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
+    >
       <div className="chead">
-        <div className={`av ${tone}`}>{initials(employee)}</div>
+       <Avatar employeeId={employee.id} initials={initials(employee)}
+          tone={tone} hasPhoto={employee.hasPhoto} />
         <div className="who">
           <h3>
             {employee.firstName} {employee.lastName}
@@ -94,6 +106,8 @@ function Card({ employee, tone }: { employee: Employee; tone: string }) {
 
 export default function People() {
   const [search, setSearch] = useState('');
+  const [open, setOpen] = useState<string | null>(null);
+  const { can } = useAuth();
   const { data, isLoading, error } = useQuery({
     queryKey: ['employees', search],
     queryFn: () => listEmployees(search),
@@ -115,7 +129,9 @@ export default function People() {
           </h2>
           <div className="acts">
             <button className="btn">Export</button>
-            <button className="btn pri">Add employee</button>
+            {can('employee.write') ? (
+              <button className="btn pri" onClick={() => setOpen('new')}>Add employee</button>
+            ) : null}
           </div>
         </div>
         <div className="tabs">
@@ -166,10 +182,17 @@ export default function People() {
         {employees.length > 0 ? (
           <div className="grid">
             {employees.map((employee, i) => (
-              <Card key={employee.id} employee={employee} tone={AVATAR_TONES[i % 5]} />
+              <Card
+                key={employee.id}
+                employee={employee}
+                tone={AVATAR_TONES[i % 5]}
+                onOpen={() => setOpen(employee.id)}
+              />
             ))}
           </div>
         ) : null}
+
+        {open ? <EmployeeForm employeeId={open} onClose={() => setOpen(null)} /> : null}
 
         <div className="legend">
           <h4>Employee file</h4>

@@ -7,10 +7,27 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_BASE: ghcr.io/${{ github.repository }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mapa/shared build
+      # Payroll figures are pinned to the real July 2026 sheet. If these
+      # fail, the image must not be published.
+      - run: pnpm --filter @mapa/shared test
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -29,6 +46,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Image names must be lowercase; GitHub usernames may not be.
+      - id: name
+        run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -36,8 +57,8 @@ jobs:
           target: production
           push: true
           tags: |
-            ${{ env.IMAGE_BASE }}-${{ matrix.app }}:latest
-            ${{ env.IMAGE_BASE }}-${{ matrix.app }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.name.outputs.repo }}-${{ matrix.app }}:latest
+            ${{ env.REGISTRY }}/${{ steps.name.outputs.repo }}-${{ matrix.app }}:${{ github.sha }}
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL }}
           cache-from: type=gha

@@ -93,10 +93,11 @@ const ROLES: Record<string, { name: string; permissions: string[] }> = {
       'payroll.post', 'payroll.pay', 'ledger.read', 'ledger.post',
       'voucher.read', 'voucher.raise', 'report.read'],
   },
-  HR_OFFICER: {
+ HR_OFFICER: {
     name: 'HR and Admin Officer',
     permissions: ['employee.read', 'employee.write',
-      'employee.document.upload', 'payroll.read', 'report.read'],
+      'employee.document.upload', 'payroll.read', 'report.read',
+      'settings.manage'],
   },
   STAFF: { name: 'Staff', permissions: [] },
 };

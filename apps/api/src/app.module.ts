@@ -6,7 +6,8 @@ import { PrismaService } from './common/prisma.service';
 import { EmployeesModule } from './employees/employees.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard, Public } from './auth/auth.guard';
-
+import { DocumentsModule } from './documents/documents.module';
+import { OrgModule } from './org/org.module';
 @Controller('health')
 class HealthController {
   constructor(private prisma: PrismaService) {}
@@ -20,7 +21,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule, EmployeesModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule, AuthModule, EmployeesModule,DocumentsModule,OrgModule],
   controllers: [HealthController],
   // Global. Every route requires a valid token unless marked @Public().
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }],

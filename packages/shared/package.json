@@ -4,7 +4,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "tsx src/payroll.test.ts",
+    "test": "tsx src/payroll.test.ts && tsx src/schemas.test.ts",
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput"
   },
@@ -16,5 +16,7 @@
     "tsx": "^4.23.1",
     "typescript": "^5.6.3"
   },
-  "files": ["dist"]
+  "files": [
+    "dist"
+  ]
 }

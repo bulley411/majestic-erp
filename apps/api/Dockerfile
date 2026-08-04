@@ -1,29 +1,41 @@
-FROM node:22-alpine AS base
+# ---------- dependencies ----------
+FROM node:22-alpine AS deps
 RUN corepack enable && apk add --no-cache openssl
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
-RUN pnpm install --frozen-lockfile=false
+COPY apps/web/package.json apps/web/
+RUN pnpm install --frozen-lockfile
 
-FROM base AS development
+# ---------- build ----------
+FROM deps AS build
 COPY . .
-RUN pnpm --filter @mapa/api exec prisma generate
-EXPOSE 3000
-CMD ["pnpm", "--filter", "@mapa/api", "dev"]
+# shared must be compiled before the API can import it
+RUN pnpm --filter @mapa/shared build \
+ && pnpm --filter @mapa/api exec prisma generate \
+ && pnpm --filter @mapa/api exec nest build
 
-FROM base AS build
-COPY . .
-RUN pnpm --filter @mapa/api exec prisma generate && pnpm --filter @mapa/api build
-
+# ---------- production ----------
 FROM node:22-alpine AS production
 RUN apk add --no-cache openssl && corepack enable
 WORKDIR /app
 ENV NODE_ENV=production
+ENV TZ=UTC
+ENV UPLOAD_DIR=/app/uploads
+
 COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=build /app/apps/api/prisma ./prisma
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/api/prisma ./apps/api/prisma
+COPY --from=build /app/apps/api/docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh && mkdir -p /app/uploads
+
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["node", "apps/api/dist/main.js"]

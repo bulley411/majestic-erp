@@ -115,12 +115,14 @@ model Department {
   code      String     @unique
   name      String // Info. Tech, Finance, Operations
   headId    String?
+  isActive  Boolean    @default(true)
   employees Employee[]
 }
 
 model JobTitle {
   id        String     @id @default(uuid())
   name      String     @unique
+  isActive  Boolean    @default(true)
   employees Employee[]
 }
 
@@ -131,6 +133,7 @@ model GradeLevel {
   name        String // Deputy Manager, Step 2
   rank        Int
   defaultGross Decimal?  @db.Decimal(19, 4)
+  isActive  Boolean    @default(true)
   employees   Employee[]
 }
 
@@ -260,6 +263,7 @@ model EmployeeCompensation {
   effectiveFrom DateTime
   effectiveTo   DateTime?
   reason        String? // appointment, promotion, salary review
+  recordedById  String?
   createdAt     DateTime @default(now())
 
   @@index([employeeId, effectiveFrom])
@@ -275,37 +279,51 @@ enum DocumentCategory {
 }
 
 /// The 26 rows of your Employee File Documentation Checklist.
+/// Document types are managed by HR at runtime, not fixed in code.
+/// New ones can be added at any time; obsolete ones are deactivated
+/// rather than deleted, so historical uploads keep their label.
 model DocumentType {
-  id        String           @id @default(uuid())
-  code      String           @unique
-  name      String
-  category  DocumentCategory
-  required  Boolean          @default(true)
-  sortOrder Int
-  documents EmployeeDocument[]
+  id          String           @id @default(uuid())
+  code        String           @unique
+  name        String
+  category    DocumentCategory
+  description String?
+  required    Boolean          @default(true)
+  /// Allows more than one file against this type (e.g. training records).
+  allowMultiple Boolean        @default(false)
+  isActive    Boolean          @default(true)
+  sortOrder   Int
+  documents   EmployeeDocument[]
+  createdAt   DateTime         @default(now())
+  ///updatedAt   DateTime         @updatedAt
+  updatedAt   DateTime         @default(now()) @updatedAt
 }
 
+/// One uploaded file. Several rows may share a documentType when that
+/// type allows multiple, so there is no unique constraint on the pair.
 model EmployeeDocument {
   id             String       @id @default(uuid())
   employeeId     String
   employee       Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   documentTypeId String
   documentType   DocumentType @relation(fields: [documentTypeId], references: [id])
-  fileUrl        String?
-  fileName       String?
-  fileSizeBytes  Int?
-  mimeType       String?
-  onFile         Boolean      @default(false)
-  checkedById    String?
-  checkedAt      DateTime?
-  reviewedById   String?
-  reviewedAt     DateTime?
+
+  /// Name on disk: a generated uuid, never the name the user supplied.
+  storedName     String       @unique
+  /// Original filename, shown in the UI and used for download.
+  originalName   String
+  fileSizeBytes  Int
+  mimeType       String
+  /// SHA-256 of the contents, for integrity checking and duplicate detection.
+  checksum       String
+
+  uploadedById   String?
+  uploadedAt     DateTime     @default(now())
   remarks        String?
-  createdAt      DateTime     @default(now())
 
-  @@unique([employeeId, documentTypeId])
+  @@index([employeeId])
+  @@index([documentTypeId])
 }
-
 // ============================== Payroll =============================
 
 model SalaryStructure {
