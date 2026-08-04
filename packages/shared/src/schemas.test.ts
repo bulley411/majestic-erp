@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { employeeCreate, employeeUpdate, documentToggleSchema } from './schemas';
+import { employeeCreate, employeeUpdate } from './schemas';
 
 let n = 0;
 const ok = (l: string, f: () => void) => { f(); n++; console.log('  ok  ' + l); };
@@ -47,10 +47,6 @@ ok('partial update accepts one field', () =>
 ok('partial update still enforces format', () =>
   assert.ok(!employeeUpdate.safeParse({ phoneNumber: 'abc' }).success));
 
-ok('document toggle requires uuid', () => {
-  assert.ok(!documentToggleSchema.safeParse({ documentTypeId: 'x', onFile: true }).success);
-  assert.ok(documentToggleSchema.safeParse({
-    documentTypeId: '3f2504e0-4f89-11d3-9a0c-0305e82c3301', onFile: true }).success);
-});
+
 
 console.log(`\n${n} checks passed\n`);

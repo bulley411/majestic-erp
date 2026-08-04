@@ -1,16 +1,16 @@
-# Majestic APA ERP — Dokploy deployment (2 vCPU / 7.8 GB VPS)
+# Majestic APA ERP — Dokploy staging deployment
 #
-# Images are built in GitHub Actions and pulled here. The server has
-# 2 cores shared with Dokploy and the staging site; building on it
-# would peg both for several minutes on every deploy.
-#
-# In Dokploy: Create Service -> Compose, add this as an extra compose
-# file alongside docker-compose.yml.
+# Images are built in GitHub Actions and pulled here; the VPS has 2 cores
+# shared with Dokploy and the existing staging site, so building on it
+# would peg both for minutes on every deploy.
 services:
   db:
     networks: [internal]
     expose: ["5432"]
-    # Tuned for a small box. Defaults assume far more RAM than we can spare.
+    environment:
+      TZ: UTC
+      PGTZ: UTC
+    # Tuned down from defaults, which assume a dedicated database server.
     command: >
       postgres
       -c shared_buffers=384MB
@@ -32,27 +32,36 @@ services:
 
   api:
     build: !reset null
-    image: ghcr.io/OWNER/majestic-erp-api:latest
+    image: ghcr.io/bulley411/majestic-erp-api:latest
     networks: [internal, dokploy-network]
     expose: ["3000"]
     environment:
       NODE_ENV: production
+      TZ: UTC
+      UPLOAD_DIR: /app/uploads
       NODE_OPTIONS: "--max-old-space-size=768"
+      CORS_ORIGIN: https://erp-staging.majesticpensionagent.com
+    volumes:
+      - uploads:/app/uploads
     deploy:
       resources:
         limits: { memory: 1G }
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.mapa-api.rule=Host(`api.majesticpensionagent.tech`)"
-      - "traefik.http.routers.mapa-api.entrypoints=websecure"
-      - "traefik.http.routers.mapa-api.tls=true"
-      - "traefik.http.routers.mapa-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mapa-api.loadbalancer.server.port=3000"
+      - "traefik.http.routers.mapa-api-staging.rule=Host(`api-staging.majesticpensionagent.com`)"
+      - "traefik.http.routers.mapa-api-staging.entrypoints=websecure"
+      - "traefik.http.routers.mapa-api-staging.tls=true"
+      - "traefik.http.routers.mapa-api-staging.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mapa-api-staging.loadbalancer.server.port=3000"
+      # Document uploads are up to 10 MB; the default proxy limit is lower.
+      - "traefik.http.routers.mapa-api-staging.middlewares=mapa-body-staging@docker"
+      - "traefik.http.middlewares.mapa-body-staging.buffering.maxRequestBodyBytes=12000000"
+      - "traefik.http.middlewares.mapa-body-staging.buffering.memRequestBodyBytes=2000000"
 
   web:
     build: !reset null
-    image: ghcr.io/OWNER/majestic-erp-web:latest
+    image: ghcr.io/bulley411/majestic-erp-web:latest
     networks: [internal, dokploy-network]
     expose: ["80"]
     deploy:
@@ -61,11 +70,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.mapa-web.rule=Host(`erp.majesticpensionagent.tech`)"
-      - "traefik.http.routers.mapa-web.entrypoints=websecure"
-      - "traefik.http.routers.mapa-web.tls=true"
-      - "traefik.http.routers.mapa-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mapa-web.loadbalancer.server.port=80"
+      - "traefik.http.routers.mapa-web-staging.rule=Host(`erp-staging.majesticpensionagent.com`)"
+      - "traefik.http.routers.mapa-web-staging.entrypoints=websecure"
+      - "traefik.http.routers.mapa-web-staging.tls=true"
+      - "traefik.http.routers.mapa-web-staging.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mapa-web-staging.loadbalancer.server.port=80"
 
 networks:
   internal:
