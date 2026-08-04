@@ -1,6 +1,5 @@
 # Local development only. Docker Compose loads this automatically.
-# Ports are published here and ONLY here — on the VPS, Traefik handles
-# all ingress and nothing should be exposed directly.
+# Overrides the GHCR images with a local build.
 services:
   db:
     ports: ["5432:5432"]
@@ -9,21 +8,22 @@ services:
     ports: ["6379:6379"]
 
   api:
+    image: !reset null
     build:
+      context: .
+      dockerfile: apps/api/Dockerfile
       target: development
-    command: pnpm --filter @mapa/api dev
     ports: ["3000:3000"]
-    volumes:
-      - ./apps/api:/app/apps/api
-      - ./packages:/app/packages
-      - /app/node_modules
+    networks: !reset [internal]
 
   web:
+    image: !reset null
     build:
+      context: .
+      dockerfile: apps/web/Dockerfile
       target: development
-    command: pnpm --filter @mapa/web dev --host
     ports: ["5173:5173"]
-    volumes:
-      - ./apps/web:/app/apps/web
-      - ./packages:/app/packages
-      - /app/node_modules
+    networks: !reset [internal]
+
+networks:
+  dokploy-network: !reset null

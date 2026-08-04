@@ -1,6 +1,8 @@
-# Base stack. Shared by local and VPS.
-# Local overrides live in docker-compose.override.yml (auto-loaded).
-# VPS additions live in docker-compose.prod.yml (Traefik labels).
+# Majestic APA ERP — single compose file for local and staging.
+#
+# Locally, docker-compose.override.yml adds published ports and hot reload.
+# On the VPS, Dokploy uses this file as-is: images are pulled from GHCR,
+# nothing is built on the server, and Traefik routes by the labels below.
 services:
   db:
     image: postgres:16-alpine
@@ -9,10 +11,17 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      # Match the API. Payroll periods and fiscal months must not shift
-      # with the server's local timezone.
+      # Payroll periods must not shift with the server's local timezone.
       TZ: UTC
       PGTZ: UTC
+    # Tuned down from defaults, which assume a dedicated database server.
+    command: >
+      postgres
+      -c shared_buffers=384MB
+      -c effective_cache_size=1GB
+      -c work_mem=8MB
+      -c maintenance_work_mem=96MB
+      -c max_connections=50
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -20,42 +29,66 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: [internal]
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 192mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
+    networks: [internal]
 
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/bulley411/majestic-erp-api:latest
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-production}
       TZ: UTC
+      UPLOAD_DIR: /app/uploads
+      NODE_OPTIONS: "--max-old-space-size=768"
+      CORS_ORIGIN: https://erp-staging.majesticpensionagent.com
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - uploads:/app/uploads
+    # Must be on dokploy-network, or Traefik cannot see it at all.
+    networks: [internal, dokploy-network]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.mapa-api.rule=Host(`api-staging.majesticpensionagent.com`)"
+      - "traefik.http.routers.mapa-api.entrypoints=websecure"
+      - "traefik.http.routers.mapa-api.tls=true"
+      - "traefik.http.routers.mapa-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mapa-api.loadbalancer.server.port=3000"
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
+    image: ghcr.io/bulley411/majestic-erp-web:latest
     restart: unless-stopped
     depends_on:
       - api
+    networks: [internal, dokploy-network]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.mapa-web.rule=Host(`erp-staging.majesticpensionagent.com`)"
+      - "traefik.http.routers.mapa-web.entrypoints=websecure"
+      - "traefik.http.routers.mapa-web.tls=true"
+      - "traefik.http.routers.mapa-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mapa-web.loadbalancer.server.port=80"
 
 volumes:
   db_data:
   redis_data:
   uploads:
+
+networks:
+  internal:
+    driver: bridge
+  dokploy-network:
+    external: true
