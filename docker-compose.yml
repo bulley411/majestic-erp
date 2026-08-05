@@ -68,6 +68,11 @@ services:
     networks: [internal, dokploy-network]
     labels:
       - "traefik.docker.network=dokploy-network"
+      # A server-wide security rule blocks /assets, /js and /config at
+      # priority 200 to deter scanners. Vite serves its bundle from
+      # /assets, so this router must outrank it for our hostname.
+      - "traefik.http.routers.mapaerp-mapaerp-hckgqa-4-websecure.priority=300"
+      - "traefik.http.routers.mapaerp-mapaerp-hckgqa-4-web.priority=300"
 volumes:
   db_data:
   redis_data:
