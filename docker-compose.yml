@@ -38,7 +38,8 @@ services:
     volumes:
       - redis_data:/data
     networks: [internal]
-
+    labels:
+      - "traefik.docker.network=dokploy-network"
   api:
     image: ghcr.io/bulley411/majestic-erp-api:latest
     restart: unless-stopped
@@ -65,7 +66,8 @@ services:
     depends_on:
       - api
     networks: [internal, dokploy-network]
-    
+    labels:
+      - "traefik.docker.network=dokploy-network"
 volumes:
   db_data:
   redis_data:
