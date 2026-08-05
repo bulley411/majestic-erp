@@ -1,16 +1,17 @@
 {
   "name": "@mapa/api",
   "version": "0.1.0",
-  "scripts": {
-    "dev": "nest start --watch",
-"build": "nest build",
+ "scripts": {
+    "dev": "pnpm --filter @mapa/shared build && nest start --watch",
+    "build": "pnpm --filter @mapa/shared build && nest build",
     "start:prod": "node dist/main.js",
     "test": "tsx src/payroll/payroll-approval.test.ts && tsx src/vouchers/voucher-approval.test.ts && tsx src/auth/auth.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "seed": "tsx prisma/seed.ts"
-  },
+    "seed": "tsx src/seeds/reference.ts",
+    "seed:admin": "tsx src/seeds/admin.ts"
+  },  
   "dependencies": {
     "@mapa/shared": "workspace:*",
     "@nestjs/common": "^10.4.4",
@@ -33,7 +34,5 @@
     "typescript": "^5.6.3",
     "@types/cookie-parser": "^1.4.7"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  }
+  "prisma": { "seed": "tsx src/seeds/reference.ts" }
 }
