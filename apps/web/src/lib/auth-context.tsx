@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signIn: async (email, password) => setUser(await apiLogin(email, password)),
     signOut: async () => { await apiLogout(); setUser(null); },
-    can: (permission) => user?.permissions.includes(permission) ?? false,
+    can: (permission) => user?.permissions?.includes(permission) ?? false,
     refresh: async () => setUser(await restoreSession()),
   };
 

@@ -223,21 +223,33 @@ export class AuthService {
     return { ok: true };
   }
 
-  async me(userId: string) {
+async me(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       include: {
-        employee: {
-          include: { department: true, jobTitle: true },
+        employee: { include: { department: true, jobTitle: true } },
+        roles: {
+          include: {
+            role: { include: { permissions: { include: { permission: true } } } },
+          },
         },
-        roles: { include: { role: true } },
       },
     });
+
+    // Must match the shape returned by /auth/login. The frontend has one
+    // SessionUser type, so an endpoint returning a different shape after a
+    // page refresh crashes the app with no visible error.
     return {
       id: user.id,
       email: user.email,
       mustChangePassword: user.mustChangePassword,
-      roles: user.roles.map((r) => ({ code: r.role.code, name: r.role.name })),
+      roles: user.roles.map((r) => r.role.code),
+      permissions: [
+        ...new Set(
+          user.roles.flatMap((r) => r.role.permissions.map((p) => p.permission.code)),
+        ),
+      ],
+      employeeId: user.employee?.id ?? null,
       employee: user.employee
         ? {
             id: user.employee.id,
