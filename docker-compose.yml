@@ -58,30 +58,14 @@ services:
         condition: service_healthy
     # Must be on dokploy-network, or Traefik cannot see it at all.
     networks: [internal, dokploy-network]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.mapa-api.rule=Host(`api-staging.majesticpensionagent.com`)"
-      - "traefik.http.routers.mapa-api.entrypoints=websecure"
-      - "traefik.http.routers.mapa-api.tls=true"
-      - "traefik.http.routers.mapa-api.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mapa-api.loadbalancer.server.port=3000"
-
+   
   web:
     image: ghcr.io/bulley411/majestic-erp-web:latest
     restart: unless-stopped
     depends_on:
       - api
     networks: [internal, dokploy-network]
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=dokploy-network"
-      - "traefik.http.routers.mapa-web.rule=Host(`erp-staging.majesticpensionagent.com`)"
-      - "traefik.http.routers.mapa-web.entrypoints=websecure"
-      - "traefik.http.routers.mapa-web.tls=true"
-      - "traefik.http.routers.mapa-web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.mapa-web.loadbalancer.server.port=80"
-
+    
 volumes:
   db_data:
   redis_data:
