@@ -27,7 +27,10 @@ const NAV: { group: string; items: { label: string; key: string; perm?: string }
   },
   {
     group: 'Settings',
-    items: [{ label: 'Document types', key: 'hr-settings', perm: 'employee.read' }],
+    items: [
+      { label: 'HR settings', key: 'hr-settings', perm: 'employee.read' },
+      { label: 'Users', key: 'users', perm: 'user.read' },
+    ],
   },
 ];
 

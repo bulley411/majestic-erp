@@ -457,3 +457,53 @@ export const addCompensation = (employeeId: string, data: Record<string, unknown
     method: 'POST',
     body: JSON.stringify(data),
   });
+
+  /* ------------------------------ users ----------------------------- */
+
+export interface SystemUser {
+  id: string;
+  email: string;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  roles: { id: string; code: string; name: string }[];
+  employee: { id: string; staffId: string; firstName: string; lastName: string } | null;
+}
+
+export interface UserOptions {
+  roles: { id: string; code: string; name: string; permissions: string[] }[];
+  employees: { id: string; staffId: string; firstName: string; lastName: string }[];
+}
+
+export const listUsers = () => api<SystemUser[]>('/users');
+export const getUserOptions = () => api<UserOptions>('/users/options');
+
+export const createUser = (data: {
+  email: string; roleIds: string[]; employeeId?: string;
+}) =>
+  api<{ id: string; email: string; temporaryPassword: string }>('/users', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const setUserRoles = (id: string, roleIds: string[]) =>
+  api<{ ok: boolean }>(`/users/${id}/roles`, {
+    method: 'PATCH',
+    body: JSON.stringify({ roleIds }),
+  });
+
+export const setUserActive = (id: string, isActive: boolean) =>
+  api<{ ok: boolean }>(`/users/${id}/active`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isActive }),
+  });
+
+export const setUserEmployee = (id: string, employeeId: string | null) =>
+  api<{ ok: boolean }>(`/users/${id}/employee`, {
+    method: 'PATCH',
+    body: JSON.stringify({ employeeId }),
+  });
+
+export const resetUserPassword = (id: string) =>
+  api<{ temporaryPassword: string }>(`/users/${id}/reset-password`, { method: 'POST' });

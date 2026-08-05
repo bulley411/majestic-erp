@@ -5,6 +5,7 @@ import People from './pages/People';
 import HrSettings from './pages/HrSettings';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
+import Users from './pages/Users';
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -42,6 +43,7 @@ function Routed() {
     <Shell page={page} onNavigate={setPage}>
       {page === 'people' ? <People />
         : page === 'hr-settings' ? <HrSettings />
+         : page === 'users' ? <Users />
         : <Placeholder title={TITLES[page] ?? 'Module'} />}
     </Shell>
   );
