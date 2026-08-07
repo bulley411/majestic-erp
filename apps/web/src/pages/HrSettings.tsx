@@ -8,12 +8,14 @@ import { useAuth } from '../lib/auth-context';
 import DepartmentsPanel from './settings/DepartmentsPanel';
 import JobTitlesPanel from './settings/JobTitlesPanel';
 import GradeLevelsPanel from './settings/GradeLevelsPanel';
+import AttendancePanel from './settings/AttendancePanel';
 
 const TABS = [
   { id: 'documents', label: 'Document types' },
   { id: 'departments', label: 'Departments' },
   { id: 'titles', label: 'Job titles' },
   { id: 'grades', label: 'Grade levels' },
+  { id: 'attendance', label: 'Attendance' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -247,6 +249,11 @@ export default function HrSettings() {
         {tab === 'grades' ? (
           <div className="fsection"><h4>Grade levels</h4>
             <GradeLevelsPanel {...panelProps} />
+          </div>
+        ) : null}
+        {tab === 'attendance' ? (
+          <div className="fsection"><h4>Attendance policy</h4>
+            <AttendancePanel manage={manage} onError={setError} />
           </div>
         ) : null}
       </div>

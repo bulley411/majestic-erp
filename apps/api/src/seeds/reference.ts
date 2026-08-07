@@ -68,37 +68,38 @@ const PERMISSIONS = [
   'voucher.read', 'voucher.raise', 'voucher.approve',
   'report.read', 'settings.manage',
   'user.read', 'user.manage',
+  'attendance.read', 'attendance.write',
 ];
 
 const ROLES: Record<string, { name: string; permissions: string[] }> = {
   ED: {
     name: 'Executive Director',
     permissions: ['employee.read', 'payroll.read', 'ledger.read',
-      'voucher.read', 'voucher.approve', 'report.read'],
+      'voucher.read', 'voucher.approve', 'report.read','attendance.read'],
   },
   MD: {
     name: 'Managing Director',
     permissions: ['employee.read', 'payroll.read', 'payroll.approve',
-      'ledger.read', 'voucher.read', 'voucher.approve', 'report.read'],
+      'ledger.read', 'voucher.read', 'voucher.approve', 'report.read','attendance.read'],
   },
   FINANCE_HEAD: {
     name: 'Head of Finance',
     permissions: ['employee.read', 'payroll.read', 'payroll.prepare',
       'payroll.review', 'payroll.post', 'payroll.pay', 'ledger.read',
       'ledger.post', 'ledger.close_period', 'voucher.read', 'voucher.raise',
-      'voucher.approve', 'report.read'],
+      'voucher.approve', 'report.read','attendance.read'],
   },
   ACCOUNTANT: {
     name: 'Accountant',
     permissions: ['employee.read', 'payroll.read', 'payroll.prepare',
       'payroll.post', 'payroll.pay', 'ledger.read', 'ledger.post',
-      'voucher.read', 'voucher.raise', 'report.read'],
+      'voucher.read', 'voucher.raise', 'report.read','attendance.read'],
   },
  HR_OFFICER: {
     name: 'HR and Admin Officer',
     permissions: ['employee.read', 'employee.write',
       'employee.document.upload', 'payroll.read', 'report.read',
-      'settings.manage', 'user.read'],
+      'settings.manage', 'user.read','attendance.read','attendance.write'],
   },
   STAFF: { name: 'Staff', permissions: [] },
 };

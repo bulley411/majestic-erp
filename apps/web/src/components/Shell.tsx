@@ -7,7 +7,8 @@ const NAV: { group: string; items: { label: string; key: string; perm?: string }
     group: 'People',
     items: [
       { label: 'Employees', key: 'people' },
-      { label: 'Leave & attendance', key: 'leave' },
+      { label: 'Attendance', key: 'attendance', perm: 'attendance.read' },
+      { label: 'Leave', key: 'leave' },
     ],
   },
   {

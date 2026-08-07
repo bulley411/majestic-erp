@@ -507,3 +507,188 @@ export const setUserEmployee = (id: string, employeeId: string | null) =>
 
 export const resetUserPassword = (id: string) =>
   api<{ temporaryPassword: string }>(`/users/${id}/reset-password`, { method: 'POST' });
+/* ---------------------------- attendance -------------------------- */
+
+export type AttendanceStatus =
+  | 'PRESENT' | 'REMOTE' | 'LATE' | 'HALF_DAY'
+  | 'ABSENT' | 'ON_LEAVE' | 'PUBLIC_HOLIDAY' | 'WEEKEND' | 'SUSPENDED';
+
+export interface AttendancePolicy {
+  workingDays: number[];
+  workStart: string;
+  workEnd: string;
+  lateGraceMinutes: number;
+  deductionBasis: 'WORKING_DAYS' | 'FIXED_30';
+  latenessPolicy: 'NONE' | 'HALF_DAY_AFTER' | 'PRORATA_MINUTES';
+  latenessFreeCount: number;
+  lateWarningThreshold: number;
+}
+
+export interface RegisterRow {
+  employeeId: string;
+  staffId: string;
+  name: string;
+  department: string | null;
+  status: AttendanceStatus | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  minutesLate: number;
+  notes: string | null;
+  onApprovedLeave: string | null;
+  locked: boolean;
+  recorded: boolean;
+}
+
+export interface DailyRegister {
+  date: string;
+  isWorkingDay: boolean;
+  calendarStatus: AttendanceStatus | null;
+  employees: RegisterRow[];
+}
+
+export interface MonthlyRow {
+  employeeId: string;
+  staffId: string;
+  name: string;
+  monthlyGross: string;
+  summary: {
+    workingDays: number;
+    daysPresent: number; daysRemote: number; daysLate: number;
+    daysHalf: number; daysAbsent: number; daysOnLeave: number;
+    daysSuspended: number; daysUnmarked: number;
+    daysEarned: string; daysForfeited: string;
+    totalMinutesLate: number; lateWarning: boolean;
+  };
+  deduction: { dailyRate: string; amount: string; adjustedGross: string };
+  days: Record<string, AttendanceStatus>;
+}
+
+export interface MonthlyAttendance {
+  year: number;
+  month: number;
+  policy: AttendancePolicy;
+  days: { date: string; working: boolean; holiday: boolean }[];
+  employees: MonthlyRow[];
+}
+
+export interface Holiday {
+  id: string;
+  date: string;
+  name: string;
+}
+
+export const getRegister = (date: string) =>
+  api<DailyRegister>(`/attendance/register?date=${date}`);
+
+export const markAttendance = (entries: Array<{
+  employeeId: string; date: string; status: AttendanceStatus;
+  checkIn?: string; checkOut?: string; notes?: string;
+}>) =>
+  api<{ saved: number }>('/attendance/mark', {
+    method: 'POST',
+    body: JSON.stringify({ entries }),
+  });
+
+export const markRemainingPresent = (date: string) =>
+  api<{ saved: number }>('/attendance/mark-remaining-present', {
+    method: 'POST',
+    body: JSON.stringify({ date }),
+  });
+
+export const getMonthlyAttendance = (year: number, month: number) =>
+  api<MonthlyAttendance>(`/attendance/monthly?year=${year}&month=${month}`);
+
+export const getAttendancePolicy = () => api<AttendancePolicy>('/attendance/policy');
+
+export const updateAttendancePolicy = (data: Partial<AttendancePolicy>) =>
+  api<AttendancePolicy>('/attendance/policy', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
+export const listHolidays = (year?: number) =>
+  api<Holiday[]>(`/attendance/holidays${year ? `?year=${year}` : ''}`);
+
+export const addHoliday = (date: string, name: string) =>
+  api<Holiday>('/attendance/holidays', {
+    method: 'POST',
+    body: JSON.stringify({ date, name }),
+  });
+
+export const seedHolidays = (year: number) =>
+  api<{ added: string[] }>('/attendance/holidays/seed', {
+    method: 'POST',
+    body: JSON.stringify({ year }),
+  });
+
+export const removeHoliday = (id: string) =>
+  api<{ ok: boolean }>(`/attendance/holidays/${id}`, { method: 'DELETE' });
+
+/** Downloads the pre-filled monthly template. */
+export async function downloadAttendanceTemplate(year: number, month: number) {
+  const send = (token: string | null) =>
+    fetch(`${BASE}/api/attendance/template?year=${year}&month=${month}`, {
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+  let res = await send(getAccessToken());
+  if (res.status === 401) {
+    const fresh = await refreshAccessToken();
+    if (fresh) res = await send(fresh);
+  }
+  if (!res.ok) throw new ApiError('Could not build the template.', res.status);
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `attendance-${year}-${String(month).padStart(2, '0')}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Import errors arrive as a list, so the caller can show every problem at once. */
+export interface ImportResult {
+  imported: number;
+  wouldImport: number;
+  errors: string[];
+}
+
+export async function importAttendance(
+  file: File, year: number, month: number, dryRun: boolean,
+): Promise<ImportResult> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('year', String(year));
+  form.append('month', String(month));
+  form.append('dryRun', String(dryRun));
+
+  const send = (token: string | null) =>
+    fetch(`${BASE}/api/attendance/import`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+
+  let res = await send(getAccessToken());
+  if (res.status === 401) {
+    const fresh = await refreshAccessToken();
+    if (fresh) res = await send(fresh);
+  }
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new ApiError(
+      body.message?.message ?? body.message ?? 'Import failed.', res.status,
+    );
+    (err as ApiError & { rows?: string[] }).rows =
+      body.message?.errors ?? body.errors ?? [];
+    throw err;
+  }
+  return body;
+}
+

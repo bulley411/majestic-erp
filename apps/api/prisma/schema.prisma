@@ -238,6 +238,7 @@ model Employee {
   documents     EmployeeDocument[]
   payslips      Payslip[]
   leaveRequests LeaveRequest[]
+  attendance    AttendanceRecord[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -493,7 +494,76 @@ model LeaveRequest {
 
   @@index([employeeId, startDate])
 }
+// ============================ Attendance ============================
 
+enum AttendanceStatus {
+  PRESENT
+  REMOTE
+  LATE
+  HALF_DAY
+  ABSENT
+  ON_LEAVE
+  PUBLIC_HOLIDAY
+  WEEKEND
+  SUSPENDED
+}
+
+/// One row per employee per day. A missing row means the day was never
+/// marked, which the engine treats as worked rather than as absence.
+model AttendanceRecord {
+  id           String           @id @default(uuid())
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// Stored at UTC midnight so a date never shifts with the server clock.
+  date         DateTime         @db.Date
+  status       AttendanceStatus
+  checkIn      String?          // "HH:MM"
+  checkOut     String?
+  minutesLate  Int              @default(0)
+  notes        String?
+  recordedById String?
+  /// Set once a payroll run has consumed this record, so late edits
+  /// cannot silently change a payslip that has already been approved.
+  lockedByRunId String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([employeeId, date])
+}
+
+/// Public holidays. Islamic and Easter dates move each year and are
+/// declared by the federal government, so HR enters them rather than
+/// having the system guess and silently mis-state pay.
+model PublicHoliday {
+  id        String   @id @default(uuid())
+  date      DateTime @db.Date
+  name      String
+  createdAt DateTime @default(now())
+
+  @@unique([date])
+}
+
+/// Single-row configuration table. Attendance rules affect what people
+/// are paid, so they are data an administrator can change and audit,
+/// not constants requiring a deploy.
+model AttendanceSettings {
+  id                   String   @id @default("singleton")
+  /// Days of week that are working days. 0 = Sunday.
+  workingDays          Int[]    @default([1, 2, 3, 4, 5])
+  workStart            String   @default("08:00")
+  workEnd              String   @default("17:00")
+  lateGraceMinutes     Int      @default(15)
+  /// WORKING_DAYS or FIXED_30
+  deductionBasis       String   @default("WORKING_DAYS")
+  /// NONE, HALF_DAY_AFTER or PRORATA_MINUTES
+  latenessPolicy       String   @default("NONE")
+  latenessFreeCount    Int      @default(3)
+  lateWarningThreshold Int      @default(3)
+  updatedAt            DateTime @updatedAt
+  updatedById          String?
+}
 // ============================== Ledger ==============================
 
 enum AccountType {
