@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listVendors, createVendor, updateVendor, deleteVendor, toggleVendorActive,
-  getVendorBalance, ApiError, type Vendor,
+  ApiError, type Vendor,
 } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 
