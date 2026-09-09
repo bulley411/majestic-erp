@@ -166,14 +166,14 @@ export default function JournalEntryDetail({
             </div>
           </div>
 
-          {entry.reversesId ? (
-            <div className="fsection" style={{ borderLeft: '3px solid var(--brass)' }}>
-              <h4>Reversal</h4>
-              <p className="fnote" style={{ padding: 0 }}>
-                This entry was reversed. The reversal is referenced as <b className="mono">{entry.reversesId}</b>.
-              </p>
-            </div>
-          ) : null}
+    {entry.reversesId ? (
+  <div className="fsection" style={{ borderLeft: '3px solid var(--brass)' }}>
+    <h4>Reversal</h4>
+    <p className="fnote" style={{ padding: 0 }}>
+      This entry was reversed. The reversal ID is <b className="mono">{entry.reversesId}</b>.
+    </p>
+  </div>
+) : null}
 
           <p className="fnote">
             Posted entries are immutable and cannot be edited. Use the reverse button

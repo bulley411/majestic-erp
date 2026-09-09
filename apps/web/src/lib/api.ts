@@ -837,6 +837,7 @@ export interface JournalEntry {
   postedAt: string | null;
   createdAt: string;
   lines: JournalLine[];
+  reversesId?: string | null;  // ← ADD THIS
   _count?: { lines: number };
 }
 
