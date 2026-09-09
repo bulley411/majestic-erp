@@ -7,6 +7,10 @@ import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
 import Users from './pages/Users';
 import Attendance from './pages/Attendance';
+import Payroll from './pages/Payroll';
+import Ledger from './pages/Ledger';
+import Vendors from './pages/Vendors';
+import Vouchers from './pages/Vouchers';
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -44,6 +48,10 @@ function Routed() {
     <Shell page={page} onNavigate={setPage}>
       {page === 'people' ? <People />
         : page === 'attendance' ? <Attendance />
+        : page === 'payroll' ? <Payroll />
+        : page === 'ledger' ? <Ledger />
+        :page === 'vendors' ? <Vendors /> 
+        : page === 'vouchers' ? <Vouchers />
         : page === 'hr-settings' ? <HrSettings />
         : page === 'users' ? <Users />
         : <Placeholder title={TITLES[page] ?? 'Module'} />}

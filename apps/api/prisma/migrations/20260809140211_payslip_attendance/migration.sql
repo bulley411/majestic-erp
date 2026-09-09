@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Payslip" ADD COLUMN     "attendanceDeduction" DECIMAL(19,4) NOT NULL DEFAULT 0,
+ADD COLUMN     "contractedGross" DECIMAL(19,4) NOT NULL DEFAULT 0,
+ADD COLUMN     "daysAbsent" DECIMAL(9,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "daysForfeited" DECIMAL(9,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "workingDays" INTEGER NOT NULL DEFAULT 0;

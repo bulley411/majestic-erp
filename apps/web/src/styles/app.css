@@ -415,7 +415,406 @@ h2.page{font-family:'Archivo';font-size:25px;font-weight:600;letter-spacing:-.02
   background:var(--surface);font:500 12px 'IBM Plex Sans';color:var(--slate);cursor:pointer}
 .daypicker button.on{background:var(--ink);border-color:var(--ink);color:#fff}
 .daypicker button:disabled{opacity:.5;cursor:not-allowed}
+
+/* ---------- payroll ---------- */
+.runlist{list-style:none}
+.runlist li{display:flex;justify-content:space-between;align-items:center;gap:20px;
+  padding:13px 0;border-bottom:1px solid var(--line-soft);cursor:pointer;flex-wrap:wrap}
+.runlist li:last-child{border-bottom:0}
+.runlist li:hover{background:linear-gradient(90deg,rgba(184,134,43,.05),transparent 50%)}
+.runmain b{display:block;font-family:'Archivo';font-size:15px;font-weight:600;color:var(--ink)}
+.runmain em{font-style:normal;font-size:11.5px;color:var(--slate-2);display:block;margin-top:2px}
+.runtotals{display:flex;gap:22px;flex-wrap:wrap}
+.runtotals span{font-size:11px;color:var(--slate-2);text-align:right}
+.runtotals b{display:block;font-size:13.5px;color:var(--ink);margin-top:2px}
+.tag.info{background:#EEF3F9;border-color:#C9D9EA;color:var(--ink-3)}
+
+.stagebar{display:flex;gap:0;background:var(--surface);border:1px solid var(--line);
+  border-radius:9px;padding:14px 18px;margin-bottom:14px;flex-wrap:wrap}
+.stage{display:flex;gap:9px;align-items:center;flex:1;min-width:140px;position:relative;
+  padding-right:14px}
+.stage:not(:last-child)::after{content:"";position:absolute;right:7px;top:50%;
+  width:14px;height:1px;background:var(--line)}
+.stagedot{width:9px;height:9px;border-radius:50%;background:#DDE5EC;flex:none}
+.stage.done .stagedot{background:var(--brass)}
+.stage.now .stagedot{background:var(--ink);box-shadow:0 0 0 4px rgba(11,34,57,.12)}
+.stage b{display:block;font-size:12.5px;font-weight:600;color:var(--slate-2)}
+.stage em{font-style:normal;font-size:10.5px;color:var(--slate-2)}
+.stage.done b,.stage.now b{color:var(--ink)}
+
+.runsummary{display:flex;gap:0;background:var(--surface);border:1px solid var(--line);
+  border-radius:9px;overflow:hidden;margin-bottom:14px;flex-wrap:wrap}
+.runsummary > div{flex:1;min-width:150px;padding:15px 18px;border-right:1px solid var(--line-soft)}
+.runsummary > div:last-child{border-right:0}
+.runsummary span{display:block;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--slate-2);font-weight:600}
+.runsummary b{display:block;font-size:17px;color:var(--ink);margin-top:4px}
+.runsummary .net{background:var(--ink);border-right:0}
+.runsummary .net span{color:var(--brass-lite)}
+.runsummary .net b{color:#fff}
+
+.slipdetail{background:var(--paper);padding:16px 18px !important}
+.slipgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px}
+.slipgrid dl{margin-top:7px}
+.slipgrid dt{font-size:12px;color:var(--slate);float:left;clear:left}
+.slipgrid dd{font-size:12px;color:var(--ink);text-align:right;margin-bottom:4px}
+
 @media (max-width:900px){.drawer{width:100%}.fgrid{grid-template-columns:1fr}}
+
+/* ---------- ledger ---------- */
+
+/* Account Tree */
+.account-tree .acc-node {
+  margin: 0;
+}
+
+.account-tree .acc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: background 0.14s;
+  font-size: 13px;
+}
+
+.account-tree .acc-row:hover {
+  background: var(--paper);
+}
+
+.acc-toggle {
+  width: 18px;
+  font-size: 10px;
+  color: var(--slate-2);
+  flex: none;
+  text-align: center;
+}
+
+.acc-code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--slate-2);
+  min-width: 56px;
+  flex: none;
+}
+
+.acc-name {
+  flex: 1;
+  color: var(--ink);
+}
+
+.acc-type {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 3px;
+  background: var(--paper);
+  flex: none;
+}
+
+.acc-count {
+  font-size: 11px;
+  color: var(--slate-2);
+  flex: none;
+}
+
+.acc-children {
+  margin-left: 8px;
+  border-left: 1px solid var(--line-soft);
+  padding-left: 4px;
+}
+
+/* Journal Entries */
+.entry-list {
+  list-style: none;
+}
+
+.entry-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.entry-row:last-child {
+  border-bottom: 0;
+}
+
+.entry-row:hover {
+  background: linear-gradient(90deg, rgba(184, 134, 43, .05), transparent 50%);
+}
+
+.entry-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.entry-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.entry-header b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.entry-date {
+  font-size: 12px;
+  color: var(--slate-2);
+}
+
+.entry-main em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--slate);
+  display: block;
+  margin-top: 2px;
+}
+
+.entry-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.entry-totals {
+  display: flex;
+  gap: 22px;
+  flex: none;
+}
+
+.entry-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 11px;
+  color: var(--slate-2);
+}
+
+.entry-total .mono {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+/* Entry Detail */
+.entry-detail-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 14px;
+}
+
+.entry-detail-header b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 2px;
+}
+
+.entry-detail-header em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--slate-2);
+  display: block;
+  margin-top: 1px;
+}
+
+.entry-narration {
+  padding: 6px 0 0;
+}
+
+.entry-narration p {
+  font-size: 13px;
+  color: var(--slate);
+  margin-top: 4px;
+}
+
+/* Financial Statements */
+.fin-section {
+  margin-bottom: 16px;
+}
+
+.fin-section h5 {
+  font-family: 'Archivo', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ink-3);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--brass);
+  margin-bottom: 8px;
+}
+
+.fin-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.fin-row:last-child {
+  border-bottom: 0;
+}
+
+.fin-row span:first-child {
+  color: var(--slate);
+}
+
+.fin-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0 0;
+  margin-top: 4px;
+  border-top: 2px solid var(--line);
+  font-size: 13px;
+}
+
+.fin-net {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0 0;
+  margin-top: 12px;
+  border-top: 3px solid var(--brass);
+  font-size: 15px;
+}
+
+.fin-net .bad {
+  color: var(--rose);
+}
+
+.fin-balance-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 2px solid var(--line);
+}
+
+.fin-balance-summary > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--paper);
+  border-radius: var(--r);
+  font-size: 14px;
+}
+
+.fin-balance-summary .mono {
+  font-size: 15px;
+}
+
+/* ---------- vouchers ---------- */
+
+.voucher-list {
+  list-style: none;
+}
+
+.voucher-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.voucher-row:last-child {
+  border-bottom: 0;
+}
+
+.voucher-row:hover {
+  background: linear-gradient(90deg, rgba(184, 134, 43, .05), transparent 50%);
+}
+
+.voucher-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.voucher-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.voucher-header b {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.voucher-date {
+  font-size: 12px;
+  color: var(--slate-2);
+}
+
+.voucher-main em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--slate);
+  display: block;
+  margin-top: 2px;
+}
+
+.voucher-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.voucher-totals {
+  display: flex;
+  gap: 22px;
+  flex: none;
+  align-items: center;
+}
+
+.voucher-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 11px;
+  color: var(--slate-2);
+}
+
+.voucher-amount .mono {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+
+.voucher-amount b.mono {
+  font-size: 15px;
+}
+
+.voucher-amount small {
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .fin-balance-summary {
+    grid-template-columns: 1fr;
+  }
+}
 
 
 

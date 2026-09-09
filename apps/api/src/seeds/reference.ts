@@ -69,6 +69,14 @@ const PERMISSIONS = [
   'report.read', 'settings.manage',
   'user.read', 'user.manage',
   'attendance.read', 'attendance.write',
+  'ledger.read',        // View ledger
+  'ledger.post',        // Create/post journal entries
+  'ledger.close_period', // Close fiscal periods
+  
+   'voucher.read',    // View vouchers
+  'voucher.raise',   // Create/update vouchers
+  'voucher.approve', // Approve vouchers
+
 ];
 
 const ROLES: Record<string, { name: string; permissions: string[] }> = {

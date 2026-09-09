@@ -14,15 +14,16 @@ const NAV: { group: string; items: { label: string; key: string; perm?: string }
   {
     group: 'Payroll',
     items: [
-      { label: 'Monthly runs', key: 'payroll' },
-      { label: 'PAYE & pension', key: 'statutory' },
+      { label: 'Monthly runs', key: 'payroll', perm: 'payroll.read' },
+      { label: 'PAYE & pension', key: 'statutory', perm: 'payroll.read' },
     ],
   },
   {
     group: 'Finance',
     items: [
-      { label: 'General ledger', key: 'ledger' },
-      { label: 'Vouchers', key: 'vouchers' },
+            { label: 'General ledger', key: 'ledger', perm: 'ledger.read' },
+            { label: 'Vendors', key: 'vendors', perm: 'voucher.read' },
+      { label: 'Vouchers', key: 'vouchers', perm: 'voucher.read' },
       { label: 'Reports', key: 'reports' },
     ],
   },

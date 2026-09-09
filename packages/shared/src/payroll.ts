@@ -203,10 +203,24 @@ export function computePayslip(input: PayslipInput): Payslip {
     ? (components['BASIC'] ?? ZERO).times(STATUTORY.NHF)
     : ZERO;
 
-  const rentRelief = Decimal.min(
+ // Rent relief: Use declared annual rent if provided, otherwise use standard formula
+// Declared annual rent comes from the Bank & Statutory tab (annualRentPaid field)
+// Standard formula: 20% of annual gross, capped at ₦500,000
+let rentRelief: Decimal;
+
+if (annualRentPaid && annualRentPaid.gt(0)) {
+  // Use the declared annual rent from Bank & Statutory tab
+  rentRelief = Decimal.min(
     annualRentPaid.times(STATUTORY.RENT_RELIEF_RATE),
     STATUTORY.RENT_RELIEF_CAP,
   );
+} else {
+  // Fallback to standard formula: 20% of annual gross, capped at ₦500,000
+  rentRelief = Decimal.min(
+    annualGross.times(STATUTORY.RENT_RELIEF_RATE),
+    STATUTORY.RENT_RELIEF_CAP,
+  );
+}
 
   // Annual reliefs: pension, NHF, rent relief
   const annualReliefs = pensionableAnnual

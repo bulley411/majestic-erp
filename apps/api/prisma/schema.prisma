@@ -433,7 +433,18 @@ model Payslip {
   employeeId String
   employee   Employee   @relation(fields: [employeeId], references: [id])
 
+  /// Gross before any attendance reduction, i.e. the contracted figure.
+  contractedGross     Decimal @default(0) @db.Decimal(19, 4)
+  /// Gross actually earned. PAYE and pension are computed from this.
   monthlyGross        Decimal @db.Decimal(19, 4)
+
+  // Attendance, stored on the payslip so it explains its own figures
+  // without needing to re-read records that may since have changed.
+  workingDays         Int     @default(0)
+  daysAbsent          Decimal @default(0) @db.Decimal(9, 2)
+  daysForfeited       Decimal @default(0) @db.Decimal(9, 2)
+  attendanceDeduction Decimal @default(0) @db.Decimal(19, 4)
+
   basicSalary         Decimal @db.Decimal(19, 4)
   housingAllowance    Decimal @db.Decimal(19, 4)
   transportAllowance  Decimal @db.Decimal(19, 4)
@@ -583,8 +594,13 @@ model Account {
   parent   Account?      @relation("AccountTree", fields: [parentId], references: [id])
   children Account[]     @relation("AccountTree")
   isActive Boolean       @default(true)
-  lines    JournalLine[]
-  bank     Bank?
+  lines     JournalLine[]
+  banks     Bank[]
+  expenseCategories ExpenseCategory[]
+  vendors   Vendor[]   // ← ADD THIS LINE
+
+  @@index([code])
+  @@index([parentId])
 }
 
 model Bank {
@@ -685,6 +701,8 @@ model Voucher {
   raisedById   String?
   approvedById String?
   approvedAt   DateTime?
+   vendorId        String?
+  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
   /// Role required to approve, resolved from the amount when raised.
   requiredApproverRole String?
   rejectionReason String?
@@ -736,5 +754,44 @@ model ExpenseCategory {
   code     String    @unique
   name     String // Startup cost, Utilities, Professional fees
   accountId String?
-  vouchers Voucher[]
+  account     Account? @relation(fields: [accountId], references: [id])  // ← ADD THIS
+
+  vouchers    Voucher[]
 }
+
+// Vendor
+model Vendor {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  type            VendorType @default(SUPPLIER)
+  contactPerson   String?
+  email           String?
+  phone           String?
+  address         String?
+  taxId           String?
+  accountNumber   String?
+  bankName        String?
+  accountId       String?
+  account         Account? @relation(fields: [accountId], references: [id])
+  isActive        Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  vouchers        Voucher[]
+
+  @@index([code])
+  @@index([name])
+  @@index([type])
+  @@index([isActive])
+}
+
+enum VendorType {
+  SUPPLIER
+  CUSTOMER
+  CONSULTANT
+  OTHER
+}
+
+

@@ -692,3 +692,471 @@ export async function importAttendance(
   return body;
 }
 
+/* ------------------------------ payroll --------------------------- */
+
+export type RunStatus =
+  | 'DRAFT' | 'PREPARED' | 'REVIEWED' | 'APPROVED'
+  | 'POSTED' | 'PAID' | 'REJECTED';
+
+export type RunAction =
+  | 'PREPARE' | 'REVIEW' | 'APPROVE' | 'REJECT' | 'POST' | 'MARK_PAID';
+
+export interface PayrollRunSummary {
+  id: string;
+  reference: string;
+  periodYear: number;
+  periodMonth: number;
+  status: RunStatus;
+  totalGross: string;
+  totalNet: string;
+  totalPaye: string;
+  totalPensionEmployee: string;
+  totalPensionEmployer: string;
+  approvedAt: string | null;
+  createdAt: string;
+  _count?: { payslips: number };
+}
+
+export interface PayslipRow {
+  id: string;
+  contractedGross: string;
+  monthlyGross: string;
+  workingDays: number;
+  daysAbsent: string;
+  daysForfeited: string;
+  attendanceDeduction: string;
+  basicSalary: string;
+  housingAllowance: string;
+  transportAllowance: string;
+  utilityAllowance: string;
+  mealAllowance: string;
+  paye: string;
+  pensionEmployee: string;
+  pensionEmployer: string;
+  nhf: string;
+  loanRepayment: string;
+  totalDeductions: string;
+  netPay: string;
+  peculiarAllowance: string;
+  computationSnapshot: Record<string, unknown>;
+  employee: {
+    id: string; staffId: string; firstName: string; lastName: string;
+    bankName: string | null; bankAccountNumber: string | null;
+    department: { name: string } | null;
+  };
+}
+
+export interface RunApproval {
+  id: string;
+  action: string;
+  fromStatus: string;
+  toStatus: string;
+  actorRole: string;
+  remarks: string | null;
+  createdAt: string;
+}
+
+export interface PayrollRunDetail extends PayrollRunSummary {
+  payslips: PayslipRow[];
+  approvals: RunApproval[];
+  availableActions: RunAction[];
+  rejectionReason: string | null;
+}
+
+export interface PaymentSchedule {
+  reference: string;
+  status: RunStatus;
+  totalNet: string;
+  missingBankDetails: string[];
+  lines: {
+    staffId: string; name: string;
+    bankName: string | null; accountName: string | null; accountNumber: string | null;
+    amount: string; peculiarAllowance: string;
+  }[];
+}
+
+export const listPayrollRuns = () => api<PayrollRunSummary[]>('/payroll/runs');
+
+export const getPayrollRun = (id: string) => api<PayrollRunDetail>(`/payroll/runs/${id}`);
+
+export const createPayrollRun = (year: number, month: number) =>
+  api<PayrollRunSummary>('/payroll/runs', {
+    method: 'POST',
+    body: JSON.stringify({ year, month }),
+  });
+
+export const transitionRun = (id: string, action: RunAction, remarks?: string) =>
+  api<PayrollRunSummary>(`/payroll/runs/${id}/transition`, {
+    method: 'POST',
+    body: JSON.stringify({ action, remarks }),
+  });
+
+export const postRunToLedger = (id: string) =>
+  api<{ id: string; reference: string }>(`/payroll/runs/${id}/post`, { method: 'POST' });
+
+export const discardRun = (id: string) =>
+  api<{ ok: boolean }>(`/payroll/runs/${id}`, { method: 'DELETE' });
+
+export const getPaymentSchedule = (id: string) =>
+  api<PaymentSchedule>(`/payroll/runs/${id}/payment-schedule`);
+
+/* ------------------------------ ledger ----------------------------- */
+
+export interface Account {
+  id: string;
+  code: string;
+  name: string;
+  type: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE';
+  parentId: string | null;
+  isActive: boolean;
+  children?: Account[];
+  _count?: { lines: number };
+}
+
+export interface JournalLine {
+  id: string;
+  accountId: string;
+  account: Account;
+  debit: string;
+  credit: string;
+  narration: string | null;
+  sortOrder: number;
+}
+
+export interface JournalEntry {
+  id: string;
+  reference: string;
+  date: string;
+  narration: string;
+  sourceType: string;
+  sourceId: string | null;
+  status: 'DRAFT' | 'POSTED' | 'REVERSED';
+  periodId: string;
+  period: { year: number; month: number; isClosed: boolean };
+  postedById: string | null;
+  postedAt: string | null;
+  createdAt: string;
+  lines: JournalLine[];
+  _count?: { lines: number };
+}
+
+export interface TrialBalanceAccount {
+  accountId: string;
+  code: string;
+  name: string;
+  type: string;
+  debit: string;
+  credit: string;
+  balance: string;
+}
+
+export interface TrialBalance {
+  accounts: TrialBalanceAccount[];
+  summary: {
+    totalDebit: string;
+    totalCredit: string;
+    isBalanced: boolean;
+  };
+}
+
+export interface FinancialStatementItem {
+  code: string;
+  name: string;
+  amount: string;
+}
+
+export interface IncomeStatement {
+  period: string;
+  income: FinancialStatementItem[];
+  expenses: FinancialStatementItem[];
+  summary: {
+    totalIncome: string;
+    totalExpenses: string;
+    netIncome: string;
+  };
+}
+
+export interface BalanceSheet {
+  asAt: string;
+  assets: FinancialStatementItem[];
+  liabilities: FinancialStatementItem[];
+  equity: FinancialStatementItem[];
+  summary: {
+    totalAssets: string;
+    totalLiabilities: string;
+    totalEquity: string;
+    totalLiabilitiesAndEquity: string;
+  };
+}
+
+export interface GeneralLedgerEntry {
+  date: string;
+  reference: string;
+  narration: string;
+  accountCode: string;
+  accountName: string;
+  debit: string;
+  credit: string;
+  balance: string;
+}
+
+export interface FiscalPeriod {
+  id: string;
+  year: number;
+  month: number;
+  isClosed: boolean;
+  closedAt: string | null;
+}
+
+// --- Chart of Accounts ---
+
+export const getAccounts = (includeInactive = false) =>
+  api<Account[]>(`/ledger/accounts${includeInactive ? '?includeInactive=true' : ''}`);
+
+export const getAccountTree = (includeInactive = false) =>
+  api<Account[]>(`/ledger/accounts/tree${includeInactive ? '?includeInactive=true' : ''}`);
+
+export const getAccount = (id: string) =>
+  api<Account>(`/ledger/accounts/${id}`);
+
+export const getAccountBalance = (id: string, fromDate?: string, toDate?: string) => {
+  let url = `/ledger/accounts/${id}/balance`;
+  const params = new URLSearchParams();
+  if (fromDate) params.append('fromDate', fromDate);
+  if (toDate) params.append('toDate', toDate);
+  if (params.toString()) url += `?${params.toString()}`;
+  return api<{ debit: string; credit: string; balance: string }>(url);
+};
+
+// --- Journal Entries ---
+
+export const getJournalEntries = (filters?: {
+  fromDate?: string;
+  toDate?: string;
+  status?: string;
+  sourceType?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+  if (filters?.toDate) params.append('toDate', filters.toDate);
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.sourceType) params.append('sourceType', filters.sourceType);
+  const query = params.toString();
+  return api<JournalEntry[]>(`/ledger/journal-entries${query ? `?${query}` : ''}`);
+};
+
+export const getJournalEntry = (id: string) =>
+  api<JournalEntry>(`/ledger/journal-entries/${id}`);
+
+export const reverseJournalEntry = (id: string) =>
+  api<JournalEntry>(`/ledger/journal-entries/${id}/reverse`, { method: 'POST' });
+
+// --- Reports ---
+
+export const getTrialBalance = (asAt?: string, periodId?: string) => {
+  const params = new URLSearchParams();
+  if (asAt) params.append('asAt', asAt);
+  if (periodId) params.append('periodId', periodId);
+  const query = params.toString();
+  return api<TrialBalance>(`/ledger/trial-balance${query ? `?${query}` : ''}`);
+};
+
+export const getIncomeStatement = (fromDate?: string, toDate?: string, periodId?: string) => {
+  const params = new URLSearchParams();
+  if (fromDate) params.append('fromDate', fromDate);
+  if (toDate) params.append('toDate', toDate);
+  if (periodId) params.append('periodId', periodId);
+  const query = params.toString();
+  return api<IncomeStatement>(`/ledger/income-statement${query ? `?${query}` : ''}`);
+};
+
+export const getBalanceSheet = (asAt?: string, periodId?: string) => {
+  const params = new URLSearchParams();
+  if (asAt) params.append('asAt', asAt);
+  if (periodId) params.append('periodId', periodId);
+  const query = params.toString();
+  return api<BalanceSheet>(`/ledger/balance-sheet${query ? `?${query}` : ''}`);
+};
+
+export const getGeneralLedger = (accountId?: string, fromDate?: string, toDate?: string) => {
+  const params = new URLSearchParams();
+  if (accountId) params.append('accountId', accountId);
+  if (fromDate) params.append('fromDate', fromDate);
+  if (toDate) params.append('toDate', toDate);
+  const query = params.toString();
+  return api<{ entries: GeneralLedgerEntry[]; count: number }>(
+    `/ledger/general-ledger${query ? `?${query}` : ''}`
+  );
+};
+
+// --- Fiscal Periods ---
+
+export const getPeriods = (year?: number) =>
+  api<FiscalPeriod[]>(`/ledger/periods${year ? `?year=${year}` : ''}`);
+
+export const getCurrentPeriod = () =>
+  api<FiscalPeriod>('/ledger/periods/current');
+
+export const closePeriod = (id: string) =>
+  api<FiscalPeriod>(`/ledger/periods/${id}/close`, { method: 'PATCH' });
+
+export const reopenPeriod = (id: string) =>
+  api<FiscalPeriod>(`/ledger/periods/${id}/reopen`, { method: 'PATCH' });
+
+/* ------------------------------ vendors ----------------------------- */
+
+export interface Vendor {
+  id: string;
+  code: string;
+  name: string;
+  type: 'SUPPLIER' | 'CUSTOMER' | 'CONSULTANT' | 'OTHER';
+  contactPerson: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  taxId: string | null;
+  accountNumber: string | null;
+  bankName: string | null;
+  accountId: string | null;
+  isActive: boolean;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { vouchers: number };
+}
+
+export interface VendorBalance {
+  vendorId: string;
+  total: string;
+  paid: string;
+  pending: string;
+  balance: string;
+}
+
+export const listVendors = (search?: string, type?: string, includeInactive = false) => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (type) params.append('type', type);
+  if (includeInactive) params.append('includeInactive', 'true');
+  const query = params.toString();
+  return api<Vendor[]>(`/vendors${query ? `?${query}` : ''}`);
+};
+
+export const getVendorOptions = () =>
+  api<{ id: string; code: string; name: string }[]>('/vendors/options');
+
+export const getVendor = (id: string) =>
+  api<Vendor>(`/vendors/${id}`);
+
+export const getVendorBalance = (id: string) =>
+  api<VendorBalance>(`/vendors/${id}/balance`);
+
+export const createVendor = (data: Record<string, unknown>) =>
+  api<Vendor>('/vendors', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateVendor = (id: string, data: Record<string, unknown>) =>
+  api<Vendor>(`/vendors/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const deleteVendor = (id: string) =>
+  api<{ ok: boolean }>(`/vendors/${id}`, { method: 'DELETE' });
+
+export const toggleVendorActive = (id: string) =>
+  api<Vendor>(`/vendors/${id}/activate`, { method: 'PATCH' });
+/* ------------------------------ vouchers ----------------------------- */
+
+export interface Voucher {
+  id: string;
+  voucherNo: string;
+  date: string;
+  description: string;
+  amount: string;
+  whtRate: string;
+  whtAmount: string;
+  netAmount: string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'POSTED' | 'PAID' | 'REJECTED';
+  vendorId: string | null;
+  vendor: { id: string; code: string; name: string } | null;
+  categoryId: string | null;
+  category: { id: string; code: string; name: string } | null;
+  bankId: string | null;
+  bank: { id: string; name: string } | null;
+  beneficiary: string;
+  beneficiaryAccountNo: string | null;
+  raisedById: string | null;
+  approvedById: string | null;
+  approvedAt: string | null;
+  requiredApproverRole: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+  approvals: {
+    id: string;
+    action: string;
+    fromStatus: string;
+    toStatus: string;
+    actorId: string;
+    actorRole: string;
+    limitApplied: string | null;
+    remarks: string | null;
+    createdAt: string;
+  }[];
+  _count?: { approvals: number };
+}
+
+export interface VoucherApprovalInfo {
+  canApprove: boolean;
+  requiredRole: string;
+  routing: {
+    roleCode: string;
+    rank: number;
+    maxAmount: string;
+  };
+}
+
+export interface ApprovalLimit {
+  roleCode: string;
+  rank: number;
+  maxAmount: string | null;
+}
+
+export const listVouchers = (filters?: {
+  status?: string;
+  vendorId?: string;
+  fromDate?: string;
+  toDate?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters?.status) params.append('status', filters.status);
+  if (filters?.vendorId) params.append('vendorId', filters.vendorId);
+  if (filters?.fromDate) params.append('fromDate', filters.fromDate);
+  if (filters?.toDate) params.append('toDate', filters.toDate);
+  const query = params.toString();
+  return api<Voucher[]>(`/vouchers${query ? `?${query}` : ''}`);
+};
+
+export const getVoucher = (id: string) =>
+  api<Voucher>(`/vouchers/${id}`);
+
+export const getVoucherApprovalInfo = (id: string) =>
+  api<VoucherApprovalInfo>(`/vouchers/${id}/approval-info`);
+
+export const getApprovalLimits = () =>
+  api<ApprovalLimit[]>('/vouchers/approval-limits');
+
+export const createVoucher = (data: Record<string, unknown>) =>
+  api<Voucher>('/vouchers', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateVoucher = (id: string, data: Record<string, unknown>) =>
+  api<Voucher>(`/vouchers/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const transitionVoucher = (id: string, action: string, remarks?: string) =>
+  api<Voucher>(`/vouchers/${id}/transition`, {
+    method: 'POST',
+    body: JSON.stringify({ action, remarks }),
+  });
+
+export const postVoucher = (id: string) =>
+  api<{ id: string; reference: string }>(`/vouchers/${id}/post`, { method: 'POST' });
+
+export const deleteVoucher = (id: string) =>
+  api<{ ok: boolean }>(`/vouchers/${id}`, { method: 'DELETE' });
+
