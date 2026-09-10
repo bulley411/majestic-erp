@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getGeneralLedger, getAccounts, type GeneralLedgerEntry } from '../../lib/api';
+//import { getGeneralLedger, getAccounts, type GeneralLedgerEntry } from '../../lib/api';
+import { getGeneralLedger, getAccounts } from '../../lib/api';
 
 const naira = (v: string) =>
   '₦' + Number(v).toLocaleString('en-NG', { minimumFractionDigits: 2 });

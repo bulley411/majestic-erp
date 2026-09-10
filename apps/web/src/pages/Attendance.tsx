@@ -25,10 +25,10 @@ const SETTABLE: { value: AttendanceStatus; label: string; short: string }[] = [
   { value: 'SUSPENDED', label: 'Suspended', short: 'S' },
 ];
 
-const SHORT: Record<string, string> = {
-  PRESENT: 'P', REMOTE: 'R', LATE: 'L', HALF_DAY: 'H', ABSENT: 'A',
-  ON_LEAVE: 'LV', SUSPENDED: 'S', PUBLIC_HOLIDAY: '·', WEEKEND: '·',
-};
+// const SHORT: Record<string, string> = {
+//   PRESENT: 'P', REMOTE: 'R', LATE: 'L', HALF_DAY: 'H', ABSENT: 'A',
+//   ON_LEAVE: 'LV', SUSPENDED: 'S', PUBLIC_HOLIDAY: '·', WEEKEND: '·',
+// };
 
 const naira = (v: string) =>
   '₦' + Number(v).toLocaleString('en-NG', { minimumFractionDigits: 2 });

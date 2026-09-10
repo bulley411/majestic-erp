@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listVouchers, createVoucher, updateVoucher, transitionVoucher,
-  postVoucher, deleteVoucher, getVoucherApprovalInfo, getApprovalLimits,
-  listVendors, getVendorOptions, ApiError, type Voucher,
+  postVoucher, deleteVoucher,
+  getVendorOptions, ApiError, type Voucher,
 } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 
@@ -75,10 +75,10 @@ export default function Vouchers() {
     queryFn: getVendorOptions,
   });
 
-  const { data: limits } = useQuery({
-    queryKey: ['approval-limits'],
-    queryFn: getApprovalLimits,
-  });
+//   const { data: limits } = useQuery({
+//     queryKey: ['approval-limits'],
+//     queryFn: getApprovalLimits,
+//   });
 
   const flashSuccess = (msg: string) => {
     setSuccess(msg);
@@ -113,7 +113,8 @@ export default function Vouchers() {
   const transition = useMutation({
     mutationFn: ({ id, action, remarks }: { id: string; action: string; remarks?: string }) =>
       transitionVoucher(id, action, remarks),
-    onSuccess: (v) => { done(); flashSuccess(`Voucher ${v.voucherNo} ${action.toLowerCase()}d.`); },
+    //onSuccess: (v) => { done(); flashSuccess(`Voucher ${v.voucherNo} ${action.toLowerCase()}d.`); },
+    onSuccess: (v) => { done(); flashSuccess(`Voucher ${v.voucherNo} updated.`); },
     onError: fail,
   });
 
@@ -132,15 +133,15 @@ export default function Vouchers() {
   const busy = create.isPending || update.isPending || transition.isPending ||
     post.isPending || remove.isPending;
 
-  const getRoutingHint = (amount: number) => {
-    if (!limits) return 'Loading…';
-    const sorted = [...limits].sort((a, b) => a.rank - b.rank);
-    const match = sorted.find((l) => l.maxAmount === null || amount <= Number(l.maxAmount));
-    if (!match) return 'No approval limit found';
-    const label = match.roleCode === 'ED' ? 'Executive Director' :
-                  match.roleCode === 'MD' ? 'Managing Director' : match.roleCode;
-    return `Requires ${label} approval`;
-  };
+//   const getRoutingHint = (amount: number) => {
+//     if (!limits) return 'Loading…';
+//     const sorted = [...limits].sort((a, b) => a.rank - b.rank);
+//     const match = sorted.find((l) => l.maxAmount === null || amount <= Number(l.maxAmount));
+//     if (!match) return 'No approval limit found';
+//     const label = match.roleCode === 'ED' ? 'Executive Director' :
+//                   match.roleCode === 'MD' ? 'Managing Director' : match.roleCode;
+//     return `Requires ${label} approval`;
+//   };
 
   // --- Detail View ---
   if (selectedVoucher) {
@@ -298,7 +299,7 @@ export default function Vouchers() {
                       <span className="mono">{naira(v.netAmount)}</span>
                       <small>net</small>
                     </span>
-                    {v.whtRate > 0 ? (
+                    {Number(v.whtRate) > 0 ? (
                       <span className="voucher-amount" style={{ fontSize: 10, color: 'var(--slate-2)' }}>
                         WHT {v.whtRate}%
                       </span>
@@ -581,7 +582,7 @@ function VoucherDetail({
               <div>
                 <span className="photolabel">Amount</span>
                 <b className="mono">{naira(voucher.amount)}</b>
-                {voucher.whtRate > 0 ? (
+                {Number(voucher.whtRate) > 0 ? (
                   <em>WHT {voucher.whtRate}% = {naira(voucher.whtAmount)}</em>
                 ) : null}
               </div>
