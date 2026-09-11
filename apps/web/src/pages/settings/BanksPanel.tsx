@@ -20,11 +20,11 @@ export default function BanksPanel({
   const qc = useQueryClient();
   const [draft, setDraft] = useState<typeof blank | null>(null);
 
-  const { data: banks } = useQuery({
-    queryKey: ['banks'],
-    queryFn: () => listBanks(),
-  });
 
+const { data: banksList } = useQuery({
+  queryKey: ['banks'],
+  queryFn: () => listBanks(),
+});
   const { data: accounts } = useQuery({
     queryKey: ['accounts', false],
     queryFn: () => getAccounts(false),
@@ -120,8 +120,8 @@ export default function BanksPanel({
         )
       ) : null}
 
-      <SettingsList<Bank>
-        items={(banks ?? []).map((b) => ({ ...b, isActive: true }))}
+      <SettingsList<Bank & { isActive: boolean }>
+        items={(banksList ?? []).map((b) => ({ ...b, isActive: true }))}
         manage={manage}
         busy={busy}
         renderMain={(b) => (

@@ -35,6 +35,9 @@ export default function BudgetDetail({
 
   if (isLoading || !budget) return <div className="loading">Loading budget…</div>;
 
+  const totals = vsActual?.totals;
+  const lines = vsActual?.lines ?? [];
+
   return (
     <>
       <header className="topbar">
@@ -75,37 +78,37 @@ export default function BudgetDetail({
       </header>
 
       <div className="body">
-        {tab === 'overview' && vsActual ? (
+        {tab === 'overview' && totals ? (
           <>
             <div className="runsummary">
               <div>
                 <span>Total Budget</span>
-                <b className="mono">{naira(vsActual.totals.budgeted)}</b>
+                <b className="mono">{naira(totals.budgeted)}</b>
               </div>
               <div>
                 <span>Spent</span>
-                <b className="mono">{naira(vsActual.totals.spent)}</b>
+                <b className="mono">{naira(totals.spent)}</b>
               </div>
               <div>
                 <span>Committed</span>
-                <b className="mono">{naira(vsActual.totals.committed)}</b>
+                <b className="mono">{naira(totals.committed)}</b>
               </div>
               <div className="net">
                 <span>Remaining</span>
-                <b className="mono">{naira(vsActual.totals.remaining)}</b>
+                <b className="mono">{naira(totals.remaining)}</b>
               </div>
             </div>
 
             <div className="fsection">
               <h4>Budget utilisation</h4>
               <p className="fnote" style={{ padding: '0 0 12px' }}>
-                {pct(vsActual.totals.percentUsed)} of the total budget has been spent.
+                {pct(totals.percentUsed)} of the total budget has been spent.
               </p>
               <div className="budget-bar">
                 <div
-                  className="budget-bar-fill"
+                  className={`budget-bar-fill${Number(totals.percentUsed) > 100 ? ' over' : ''}`}
                   style={{
-                    width: Math.min(Number(vsActual.totals.percentUsed), 100) + '%',
+                    width: Math.min(Number(totals.percentUsed), 100) + '%',
                   }}
                 />
               </div>
@@ -113,7 +116,7 @@ export default function BudgetDetail({
           </>
         ) : null}
 
-        {tab === 'variance' && vsActual ? (
+        {tab === 'variance' && totals ? (
           <div className="fsection">
             <h4>Budget vs Actual — by category</h4>
             <div className="tablewrap">
@@ -130,7 +133,7 @@ export default function BudgetDetail({
                   </tr>
                 </thead>
                 <tbody>
-                  {vsActual.lines.map((l) => (
+                  {lines.map((l) => (
                     <tr key={l.id}>
                       <td>
                         <b>{l.itemName}</b>
@@ -154,11 +157,11 @@ export default function BudgetDetail({
                 <tfoot>
                   <tr>
                     <td colSpan={2}><b>Total</b></td>
-                    <td className="num mono"><b>{naira(vsActual.totals.budgeted)}</b></td>
-                    <td className="num mono"><b>{naira(vsActual.totals.spent)}</b></td>
-                    <td className="num mono"><b>{naira(vsActual.totals.committed)}</b></td>
-                    <td className="num mono"><b>{naira(vsActual.totals.remaining)}</b></td>
-                    <td className="num mono"><b>{pct(vsActual.totals.percentUsed)}</b></td>
+                    <td className="num mono"><b>{naira(totals.budgeted)}</b></td>
+                    <td className="num mono"><b>{naira(totals.spent)}</b></td>
+                    <td className="num mono"><b>{naira(totals.committed)}</b></td>
+                    <td className="num mono"><b>{naira(totals.remaining)}</b></td>
+                    <td className="num mono"><b>{pct(totals.percentUsed)}</b></td>
                   </tr>
                 </tfoot>
               </table>
@@ -179,7 +182,7 @@ export default function BudgetDetail({
                   </tr>
                 </thead>
                 <tbody>
-                  {monthly.months.map((m) => (
+                  {monthly.months.map((m: any) => (
                     <tr key={m.month}>
                       <td>{m.monthName}</td>
                       <td className="num">{m.count}</td>

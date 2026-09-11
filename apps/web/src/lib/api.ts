@@ -1233,6 +1233,13 @@ export interface BudgetSummary {
     totalRemaining: string;
     percentUsed: string;
   } | null;
+  totals?: {
+    budgeted: string;
+    spent: string;
+    committed: string;
+    remaining: string;
+    percentUsed: string;
+  };
   lines?: BudgetSummaryLine[];
   message?: string;
 }
@@ -1244,6 +1251,23 @@ export interface BudgetCheckResult {
   budgeted: string;
   spent: string;
   committed: string;
+}
+
+export interface BudgetVsActual {
+  budget: {
+    id: string;
+    name: string;
+    year: number;
+    status: BudgetStatus;
+  };
+  totals: {
+    budgeted: string;
+    spent: string;
+    committed: string;
+    remaining: string;
+    percentUsed: string;
+  };
+  lines: BudgetSummaryLine[];
 }
 
 // --- API functions ---
@@ -1271,7 +1295,7 @@ export const getVarianceReport = (year?: number) => {
 };
 
 export const getBudgetVsActual = (id: string) =>
-  api<BudgetSummary>(`/budgets/${id}/vs-actual`);
+  api<BudgetVsActual>(`/budgets/${id}/vs-actual`);
 
 export const getMonthlyAnalysis = (year?: number) => {
   const params = year ? `?year=${year}` : '';
@@ -1338,7 +1362,7 @@ export interface Bank {
   accountNumber: string | null;
   accountId: string;
   account: { id: string; code: string; name: string } | null;
-  isActive?: boolean;
+   isActive: boolean;   // ← make it required
   _count?: { vouchers: number };
 }
 

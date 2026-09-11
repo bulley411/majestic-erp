@@ -3,7 +3,8 @@ import { useState, type ReactNode } from 'react';
 export interface ListItem {
   id: string;
   isActive: boolean;
-  _count?: { employees: number };
+  //_count?: { employees: number };
+  _count?: Record<string, number>;   // ← Any shape of counts
 }
 
 /**

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listVouchers, createVoucher, updateVoucher, transitionVoucher,
-  postVoucher, deleteVoucher, getApprovalLimits,
+  postVoucher, deleteVoucher,
   getVendorOptions, checkVoucherBudget, listExpenseCategories, listBanks,
   ApiError, type Voucher, type BudgetCheckResult,
 } from '../lib/api';
@@ -86,10 +86,7 @@ export default function Vouchers() {
     queryFn: listBanks,
   });
 
-  const { data: limits } = useQuery({
-    queryKey: ['approval-limits'],
-    queryFn: getApprovalLimits,
-  });
+  
 
   const flashSuccess = (msg: string) => {
     setSuccess(msg);
@@ -536,7 +533,7 @@ function VoucherDetail({
   const canApproveAction = voucher.status === 'PENDING_APPROVAL' && canApprove;
   const canReject = voucher.status === 'PENDING_APPROVAL' && canApprove;
   const canPostAction = voucher.status === 'APPROVED' && canPost;
-  const canDelete = voucher.status === 'DRAFT';
+  
 
   const handleReject = () => {
     const remarks = prompt('Reason for rejection:');
