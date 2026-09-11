@@ -60,6 +60,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.name.outputs.repo }}-${{ matrix.app }}:latest
             ${{ env.REGISTRY }}/${{ steps.name.outputs.repo }}-${{ matrix.app }}:${{ github.sha }}
           build-args: |
-            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_API_URL=
           cache-from: type=gha
           cache-to: type=gha,mode=max
