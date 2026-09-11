@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { VouchersService } from './vouchers.service';
 import { RequirePermissions } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
-
+import { BudgetsService } from '../budgets/budgets.service';
 
 // --- Schemas ---
 
@@ -38,7 +38,7 @@ const transitionSchema = z.object({
 
 @Controller('vouchers')
 export class VouchersController {
-  constructor(private vouchers: VouchersService) {}
+  constructor(private vouchers: VouchersService,private budgets: BudgetsService) {}
 
   @Get()
   @RequirePermissions('voucher.read')
@@ -111,4 +111,19 @@ export class VouchersController {
   remove(@Param('id') id: string, @CurrentUser('sub') actorId: string) {
     return this.vouchers.remove(id, actorId);
   }
+
+  // In vouchers.controller.ts
+@Get('check-budget/:categoryId')
+@RequirePermissions('voucher.read')
+async checkBudget(
+  @Param('categoryId') categoryId: string,
+  @Query('amount') amount: string,
+  @Query('date') date: string,
+) {
+  return this.budgets.checkVoucherAgainstBudget(
+    categoryId,
+    Number(amount),
+    date ? new Date(date) : new Date(),
+  );
+}
 }

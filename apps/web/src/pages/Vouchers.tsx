@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listVouchers, createVoucher, updateVoucher, transitionVoucher,
-  postVoucher, deleteVoucher,
-  getVendorOptions, ApiError, type Voucher,
+  postVoucher, deleteVoucher, getApprovalLimits,
+  getVendorOptions, checkVoucherBudget, listExpenseCategories, listBanks,
+  ApiError, type Voucher, type BudgetCheckResult,
 } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
 
@@ -75,10 +76,20 @@ export default function Vouchers() {
     queryFn: getVendorOptions,
   });
 
-//   const { data: limits } = useQuery({
-//     queryKey: ['approval-limits'],
-//     queryFn: getApprovalLimits,
-//   });
+  const { data: categories } = useQuery({
+    queryKey: ['expense-categories-options'],
+    queryFn: () => listExpenseCategories(false),
+  });
+
+  const { data: banks } = useQuery({
+    queryKey: ['banks'],
+    queryFn: listBanks,
+  });
+
+  const { data: limits } = useQuery({
+    queryKey: ['approval-limits'],
+    queryFn: getApprovalLimits,
+  });
 
   const flashSuccess = (msg: string) => {
     setSuccess(msg);
@@ -113,7 +124,6 @@ export default function Vouchers() {
   const transition = useMutation({
     mutationFn: ({ id, action, remarks }: { id: string; action: string; remarks?: string }) =>
       transitionVoucher(id, action, remarks),
-    //onSuccess: (v) => { done(); flashSuccess(`Voucher ${v.voucherNo} ${action.toLowerCase()}d.`); },
     onSuccess: (v) => { done(); flashSuccess(`Voucher ${v.voucherNo} updated.`); },
     onError: fail,
   });
@@ -132,16 +142,6 @@ export default function Vouchers() {
 
   const busy = create.isPending || update.isPending || transition.isPending ||
     post.isPending || remove.isPending;
-
-//   const getRoutingHint = (amount: number) => {
-//     if (!limits) return 'Loading…';
-//     const sorted = [...limits].sort((a, b) => a.rank - b.rank);
-//     const match = sorted.find((l) => l.maxAmount === null || amount <= Number(l.maxAmount));
-//     if (!match) return 'No approval limit found';
-//     const label = match.roleCode === 'ED' ? 'Executive Director' :
-//                   match.roleCode === 'MD' ? 'Managing Director' : match.roleCode;
-//     return `Requires ${label} approval`;
-//   };
 
   // --- Detail View ---
   if (selectedVoucher) {
@@ -228,6 +228,8 @@ export default function Vouchers() {
             draft={draft}
             setDraft={setDraft}
             vendors={vendors || []}
+            categories={categories || []}
+            banks={banks || []}
             onSave={() => create.mutate(draft)}
             onCancel={() => setDraft(null)}
             busy={busy}
@@ -241,6 +243,8 @@ export default function Vouchers() {
             draft={editing}
             setDraft={(data) => setEditing(data as Voucher)}
             vendors={vendors || []}
+            categories={categories || []}
+            banks={banks || []}
             onSave={() => {
               const { id, ...data } = editing;
               update.mutate({ id, data });
@@ -313,7 +317,7 @@ export default function Vouchers() {
 
         <p className="fnote">
           Vouchers follow an approval workflow: Draft → Pending Approval → Approved → Posted → Paid.
-          ED approves up to ₦500,000; MD approves any amount.
+          ED approves up to ₦500,000; MD approves any amount. Spending is tracked against the active budget.
         </p>
       </div>
     </>
@@ -326,6 +330,8 @@ function VoucherForm({
   draft,
   setDraft,
   vendors,
+  categories,
+  banks,
   onSave,
   onCancel,
   busy,
@@ -334,11 +340,37 @@ function VoucherForm({
   draft: any;
   setDraft: (data: any) => void;
   vendors: { id: string; code: string; name: string }[];
+  categories: { id: string; code: string; name: string }[];
+  banks: { id: string; name: string }[];
   onSave: () => void;
   onCancel: () => void;
   busy: boolean;
   isEdit: boolean;
 }) {
+  const [budgetCheck, setBudgetCheck] = useState<BudgetCheckResult | null>(null);
+
+  // Check budget when category or amount changes (debounced)
+  useEffect(() => {
+    if (!draft.categoryId || !draft.amount || draft.amount <= 0 || !draft.date) {
+      setBudgetCheck(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      checkVoucherBudget(draft.categoryId, Number(draft.amount), draft.date)
+        .then((result) => {
+          if (!cancelled) setBudgetCheck(result);
+        })
+        .catch(() => {
+          if (!cancelled) setBudgetCheck(null);
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [draft.categoryId, draft.amount, draft.date]);
+
   return (
     <div className="fsection">
       <h4>{isEdit ? 'Edit voucher' : 'New voucher'}</h4>
@@ -374,7 +406,7 @@ function VoucherForm({
             value={draft.vendorId}
             onChange={(e) => setDraft({ ...draft, vendorId: e.target.value })}
           >
-            <option value="">Select vendor</option>
+            <option value="">— Select vendor —</option>
             {vendors.map((v) => (
               <option key={v.id} value={v.id}>{v.code} - {v.name}</option>
             ))}
@@ -386,8 +418,10 @@ function VoucherForm({
             value={draft.categoryId || ''}
             onChange={(e) => setDraft({ ...draft, categoryId: e.target.value || null })}
           >
-            <option value="">Select category</option>
-            {/* Will be populated from API */}
+            <option value="">— Select category —</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.code} - {c.name}</option>
+            ))}
           </select>
         </label>
         <label className="ffield">
@@ -396,8 +430,10 @@ function VoucherForm({
             value={draft.bankId || ''}
             onChange={(e) => setDraft({ ...draft, bankId: e.target.value || null })}
           >
-            <option value="">Select bank</option>
-            {/* Will be populated from API */}
+            <option value="">— Select bank —</option>
+            {banks.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
           </select>
         </label>
         <label className="ffield">
@@ -433,6 +469,31 @@ function VoucherForm({
           />
         </label>
       </div>
+
+      {/* Budget check banner */}
+      {budgetCheck && budgetCheck.hasBudget ? (
+        budgetCheck.exceeded ? (
+          <div className="dbanner err" style={{ marginTop: 14 }}>
+            <b>⚠️ Budget exceeded</b> — This voucher will exceed the remaining budget for
+            this category. Remaining:{' '}
+            <b className="mono">
+              ₦{Number(budgetCheck.remaining).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+            </b>
+            {' '}(Budgeted: ₦{Number(budgetCheck.budgeted).toLocaleString('en-NG', { minimumFractionDigits: 0 })},
+            Spent: ₦{Number(budgetCheck.spent).toLocaleString('en-NG', { minimumFractionDigits: 0 })},
+            Committed: ₦{Number(budgetCheck.committed).toLocaleString('en-NG', { minimumFractionDigits: 0 })}).
+            You can still submit, but it will need approval.
+          </div>
+        ) : (
+          <div className="dbanner" style={{ marginTop: 14 }}>
+            <b>✓ Within budget</b> — Remaining after this voucher:{' '}
+            <b className="mono">
+              ₦{(Number(budgetCheck.remaining) - Number(draft.amount || 0)).toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+            </b>
+          </div>
+        )
+      ) : null}
+
       <div className="acts" style={{ marginTop: 14 }}>
         <button
           className="btn pri"
@@ -471,7 +532,6 @@ function VoucherDetail({
   error: string | null;
   success: string | null;
 }) {
-  const canEdit = voucher.status === 'DRAFT';
   const canSubmit = voucher.status === 'DRAFT';
   const canApproveAction = voucher.status === 'PENDING_APPROVAL' && canApprove;
   const canReject = voucher.status === 'PENDING_APPROVAL' && canApprove;
@@ -504,9 +564,6 @@ function VoucherDetail({
             </h2>
           </div>
           <div className="acts">
-            {canEdit ? (
-              <button className="btn" type="button">Edit</button>
-            ) : null}
             {canSubmit ? (
               <button
                 className="btn pri"
@@ -549,20 +606,6 @@ function VoucherDetail({
                 }}
               >
                 Post to ledger
-              </button>
-            ) : null}
-            {canDelete ? (
-              <button
-                className="btn"
-                type="button"
-                disabled={busy}
-                onClick={() => {
-                  if (confirm(`Delete ${voucher.voucherNo}?`)) {
-                    // Handle delete
-                  }
-                }}
-              >
-                Delete
               </button>
             ) : null}
             <button className="btn" type="button" onClick={onClose}>Close</button>

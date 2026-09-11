@@ -9,11 +9,15 @@ import { PrismaService } from '../common/prisma.service';
 import { Decimal } from 'decimal.js';
 import { authorizeVoucherApproval, requiredApprover } from './voucher-approval';
 import { voucherSchema } from './vouchers.controller';
+import { BudgetsService } from '../budgets/budgets.service';
 import { z } from 'zod';
 
 @Injectable()
 export class VouchersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private budgets: BudgetsService,
+  ) {}
 
   async findAll(filters: {
     status?: string;
@@ -75,14 +79,12 @@ export class VouchersService {
     const voucher = await this.findOne(id);
     const limits = await this.getApprovalLimits();
 
-    // Parse limits into the format expected by voucher-approval
     const parsedLimits = limits.map((l) => ({
       roleCode: l.roleCode,
       rank: l.rank,
       maxAmount: l.maxAmount !== null ? new Decimal(l.maxAmount) : null,
     }));
 
-    // Determine if user can approve
     let canApprove = false;
     let requiredRole = '';
     try {
@@ -104,7 +106,6 @@ export class VouchersService {
       canApprove = false;
     }
 
-    // Get routing description
     const routing = requiredApprover(new Decimal(voucher.amount.toString()), parsedLimits);
 
     return {
@@ -119,11 +120,9 @@ export class VouchersService {
   }
 
   async create(data: z.infer<typeof voucherSchema>, actorId: string) {
-    // Generate voucher number
     const count = await this.prisma.voucher.count();
     const voucherNo = `MAPA/VCH/${new Date().getFullYear()}/${String(count + 1).padStart(3, '0')}`;
 
-    // Calculate WHT if applicable
     const amount = new Decimal(data.amount);
     const whtRate = new Decimal(data.whtRate || 0);
     const whtAmount = amount.times(whtRate).dividedBy(100);
@@ -158,17 +157,21 @@ export class VouchersService {
       },
     });
 
+    // Recalculate budget if linked to active budget
+    if (voucher.categoryId) {
+      await this.recalculateBudgetForVoucher(voucher);
+    }
+
     return voucher;
   }
 
   async update(id: string, data: any, actorId: string) {
     const voucher = await this.prisma.voucher.findUniqueOrThrow({ where: { id } });
 
-    if (voucher.status !== 'DRAFT') {
-      throw new BadRequestException('Only draft vouchers can be edited.');
+    if (voucher.status !== 'DRAFT' && voucher.status !== 'REJECTED') {
+      throw new BadRequestException('Only draft or rejected vouchers can be edited.');
     }
 
-    // Recalculate WHT if amount or rate changed
     let updateData: any = { ...data };
     if (data.amount || data.whtRate !== undefined) {
       const amount = new Decimal(data.amount || voucher.amount.toString());
@@ -197,6 +200,11 @@ export class VouchersService {
       },
     });
 
+    // Recalculate budget
+    if (updated.categoryId) {
+      await this.recalculateBudgetForVoucher(updated);
+    }
+
     return updated;
   }
 
@@ -222,35 +230,19 @@ export class VouchersService {
 
     switch (action) {
       case 'SUBMIT':
-        if (voucher.status !== 'DRAFT') {
-          throw new BadRequestException('Only draft vouchers can be submitted.');
+        if (voucher.status !== 'DRAFT' && voucher.status !== 'REJECTED') {
+          throw new BadRequestException('Only draft or rejected vouchers can be submitted.');
         }
         if (!voucher.vendorId) {
           throw new BadRequestException('Vendor is required before submitting.');
         }
         toStatus = 'PENDING_APPROVAL';
-        // Check approval routing
-        try {
-          const result = authorizeVoucherApproval(
-            {
-              id: voucher.id,
-              voucherNo: voucher.voucherNo,
-              amount: new Decimal(voucher.amount.toString()),
-              status: voucher.status,
-              raisedById: voucher.raisedById,
-              approvedById: voucher.approvedById,
-            },
-            actor,
-            parsedLimits,
-          );
-          actorRole = result.approvedUnder.roleCode;
-          limitApplied = result.approvedUnder.maxAmount;
-        } catch (e) {
-          throw new BadRequestException(e.message);
-        }
+        actorRole = 'RAISER';
+        // No approval authorization needed at submission — the raiser is submitting.
+        // The required approver will be determined when someone tries to APPROVE.
         break;
 
-      case 'APPROVE':
+      case 'APPROVE': {
         if (voucher.status !== 'PENDING_APPROVAL') {
           throw new BadRequestException('Only pending vouchers can be approved.');
         }
@@ -270,6 +262,7 @@ export class VouchersService {
         actorRole = result.approvedUnder.roleCode;
         limitApplied = result.approvedUnder.maxAmount;
         break;
+      }
 
       case 'REJECT':
         if (voucher.status !== 'PENDING_APPROVAL') {
@@ -279,6 +272,7 @@ export class VouchersService {
           throw new BadRequestException('Rejection requires a reason.');
         }
         toStatus = 'REJECTED';
+        actorRole = 'APPROVER';
         break;
 
       case 'POST':
@@ -286,13 +280,15 @@ export class VouchersService {
           throw new BadRequestException('Only approved vouchers can be posted.');
         }
         toStatus = 'POSTED' as any;
+        actorRole = 'POSTER';
         break;
 
       case 'MARK_PAID':
-        if (voucher.status !== 'POSTED' as any) {
+        if (voucher.status !== ('POSTED' as any)) {
           throw new BadRequestException('Only posted vouchers can be marked as paid.');
         }
         toStatus = 'PAID' as any;
+        actorRole = 'PAYER';
         break;
 
       default:
@@ -334,6 +330,11 @@ export class VouchersService {
       },
     });
 
+    // Recalculate budget when status changes
+    if (updated.categoryId) {
+      await this.recalculateBudgetForVoucher(updated);
+    }
+
     return updated;
   }
 
@@ -350,7 +351,6 @@ export class VouchersService {
       throw new BadRequestException('Only approved vouchers can be posted to the ledger.');
     }
 
-    // Get the account for this expense category
     let accountId: string | null = null;
     if (voucher.categoryId) {
       const category = await this.prisma.expenseCategory.findUnique({
@@ -366,7 +366,6 @@ export class VouchersService {
       );
     }
 
-    // Get bank account if provided
     let bankAccountId: string | null = null;
     if (voucher.bankId) {
       const bank = await this.prisma.bank.findUnique({
@@ -382,7 +381,6 @@ export class VouchersService {
       );
     }
 
-    // Get fiscal period
     const period = await this.prisma.fiscalPeriod.findUnique({
       where: {
         year_month: {
@@ -404,8 +402,7 @@ export class VouchersService {
     const whtAmount = new Decimal(voucher.whtAmount.toString());
     const netAmount = new Decimal(voucher.netAmount.toString());
 
-    return this.prisma.$transaction(async (tx) => {
-      // Create journal entry
+    const result = await this.prisma.$transaction(async (tx) => {
       const entry = await tx.journalEntry.create({
         data: {
           reference: `JV/${voucher.voucherNo}`,
@@ -419,7 +416,6 @@ export class VouchersService {
           postedAt: new Date(),
           lines: {
             create: [
-              // Debit expense account
               {
                 accountId,
                 debit: amount.toFixed(4),
@@ -427,15 +423,21 @@ export class VouchersService {
                 narration: voucher.description,
                 sortOrder: 0,
               },
-              // Credit WHT payable if applicable
-              ...(whtAmount.gt(0) ? [{
-                accountId: (await tx.account.findUniqueOrThrow({ where: { code: '2240' } })).id,
-                debit: '0.0000',
-                credit: whtAmount.toFixed(4),
-                narration: 'WHT deducted',
-                sortOrder: 1,
-              }] : []),
-              // Credit bank account
+              ...(whtAmount.gt(0)
+                ? [
+                    {
+                      accountId: (
+                        await tx.account.findUniqueOrThrow({
+                          where: { code: '2240' },
+                        })
+                      ).id,
+                      debit: '0.0000',
+                      credit: whtAmount.toFixed(4),
+                      narration: 'WHT deducted',
+                      sortOrder: 1,
+                    },
+                  ]
+                : []),
               {
                 accountId: bankAccountId,
                 debit: '0.0000',
@@ -448,7 +450,6 @@ export class VouchersService {
         },
       });
 
-      // Update voucher
       await tx.voucher.update({
         where: { id },
         data: { status: 'POSTED' as any },
@@ -466,6 +467,13 @@ export class VouchersService {
 
       return entry;
     });
+
+    // Recalculate budget after posting
+    if (voucher.categoryId) {
+      await this.recalculateBudgetForVoucher(voucher);
+    }
+
+    return result;
   }
 
   async remove(id: string, actorId: string) {
@@ -474,6 +482,8 @@ export class VouchersService {
     if (voucher.status !== 'DRAFT') {
       throw new BadRequestException('Only draft vouchers can be deleted.');
     }
+
+    const categoryId = voucher.categoryId;
 
     await this.prisma.voucher.delete({ where: { id } });
 
@@ -487,6 +497,81 @@ export class VouchersService {
       },
     });
 
+    // Recalculate budget after deletion
+    if (categoryId) {
+      await this.recalculateBudgetForCategory(categoryId, voucher.date);
+    }
+
     return { ok: true };
+  }
+
+  /**
+   * Check if a voucher would exceed the budget for its category.
+   */
+  async checkBudget(categoryId: string, amount: number, date: string) {
+    return this.budgets.checkVoucherAgainstBudget(
+      categoryId,
+      amount,
+      new Date(date),
+    );
+  }
+
+  /**
+   * Recalculate budget line amounts after a voucher change.
+   */
+  private async recalculateBudgetForVoucher(voucher: {
+    categoryId: string | null;
+    date: Date;
+  }) {
+    if (!voucher.categoryId) return;
+    await this.recalculateBudgetForCategory(voucher.categoryId, voucher.date);
+  }
+
+  private async recalculateBudgetForCategory(categoryId: string, date: Date) {
+    const year = date.getUTCFullYear();
+
+    const budget = await this.prisma.budget.findFirst({
+      where: { year, status: 'ACTIVE' },
+    });
+
+    if (!budget) return;
+
+    // Find the budget line for this category
+    const line = await this.prisma.budgetLine.findFirst({
+      where: { budgetId: budget.id, categoryId },
+    });
+
+    if (!line) return;
+
+    // Get all vouchers for this category in the budget year
+    const vouchers = await this.prisma.voucher.findMany({
+      where: {
+        categoryId,
+        date: {
+          gte: new Date(Date.UTC(year, 0, 1)),
+          lt: new Date(Date.UTC(year + 1, 0, 1)),
+        },
+      },
+    });
+
+    let spent = new Decimal(0);
+    let committed = new Decimal(0);
+
+    for (const v of vouchers) {
+      const amount = new Decimal(v.amount.toString());
+      if (v.status === 'POSTED' || v.status === 'PAID') {
+        spent = spent.plus(amount);
+      } else if (v.status === 'PENDING_APPROVAL' || v.status === 'APPROVED') {
+        committed = committed.plus(amount);
+      }
+    }
+
+    await this.prisma.budgetLine.update({
+      where: { id: line.id },
+      data: {
+        amountSpent: spent.toFixed(4),
+        amountCommitted: committed.toFixed(4),
+      },
+    });
   }
 }

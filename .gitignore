@@ -10,3 +10,6 @@ uploads/
 packages/shared/dist/
 
 uploads/
+
+# Dev-only compose override (not for production deployment)
+docker-compose.override.yml

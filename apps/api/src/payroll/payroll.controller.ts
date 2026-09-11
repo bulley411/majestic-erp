@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, HttpCode } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, HttpCode } from '@nestjs/common';
 import { z } from 'zod';
 import { PayrollRunService } from './payroll-run.service';
 import { PayrollPostingService } from './payroll-posting.service';
 import { RequirePermissions } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AccessTokenPayload } from '../auth/tokens';
+import { PayrollSettingsService } from './payroll-settings.service';
 
 const createSchema = z.object({
   year: z.coerce.number().int().min(2020).max(2100),
@@ -21,6 +22,7 @@ export class PayrollController {
   constructor(
     private runs: PayrollRunService,
     private posting: PayrollPostingService,
+        private settings: PayrollSettingsService,  // ← Add
   ) {}
 
   @Get()
@@ -74,5 +76,21 @@ export class PayrollController {
   @RequirePermissions('payroll.prepare')
   discard(@Param('id') id: string, @CurrentUser('sub') actorId: string) {
     return this.runs.discard(id, actorId);
+  }
+
+@Get('settings/accounts')
+  @RequirePermissions('settings.manage')
+  getAccountMappings() {
+    return this.settings.getMappings();
+  }
+
+  @Patch('settings/accounts/:key')
+  @RequirePermissions('settings.manage')
+  setAccountMapping(
+    @Param('key') key: string,
+    @Body() body: { accountId: string },
+    @CurrentUser('sub') actorId: string,
+  ) {
+    return this.settings.setMapping(key, body.accountId, actorId);
   }
 }

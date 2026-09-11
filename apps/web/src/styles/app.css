@@ -810,6 +810,404 @@ h2.page{font-family:'Archivo';font-size:25px;font-weight:600;letter-spacing:-.02
   font-size: 10px;
 }
 
+/* ---------- budgets ---------- */
+
+.budget-bar {
+  width: 100%;
+  height: 20px;
+  background: var(--line-soft);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--emerald), var(--brass));
+  transition: width 0.3s;
+  border-radius: 4px;
+}
+
+.budget-bar-fill.over {
+  background: linear-gradient(90deg, var(--rose), #C63D30);
+}
+
+/* ---------- dashboard ---------- */
+
+.dash-section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--brass);
+}
+
+.dash-header h4 {
+  font-family: 'Archivo', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.dash-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.dash-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--brass);
+}
+
+.dash-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--slate-2);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.dash-value {
+  display: block;
+  font-family: 'Archivo', sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.dash-sub {
+  display: block;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--slate);
+  margin-top: 4px;
+}
+/* ---------- budget line editor ---------- */
+
+/* The table holding editable budget lines */
+.budget-lines-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  margin-top: 8px;
+}
+
+.budget-lines-table thead th {
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--slate-2);
+  font-weight: 600;
+  padding: 6px 12px 8px;
+  border-bottom: 2px solid var(--brass);
+  white-space: nowrap;
+}
+
+.budget-lines-table thead th.num {
+  text-align: right;
+}
+
+.budget-lines-table tbody tr {
+  background: var(--surface);
+  transition: box-shadow 0.15s, background 0.15s;
+}
+
+.budget-lines-table tbody tr:hover {
+  background: #FBFDFF;
+}
+
+.budget-lines-table tbody td {
+  padding: 4px 8px;
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+
+.budget-lines-table tbody td:first-child {
+  border-left: 1px solid var(--line-soft);
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  padding-left: 12px;
+}
+
+.budget-lines-table tbody td:last-child {
+  border-right: 1px solid var(--line-soft);
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  padding-right: 12px;
+}
+
+.budget-lines-table tfoot td {
+  padding: 14px 12px 6px;
+  border-top: 2px solid var(--brass);
+  font-size: 13.5px;
+}
+
+.budget-lines-table tfoot td.num {
+  text-align: right;
+}
+
+/* ---------- line inputs ---------- */
+
+.budget-input {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--r);
+  padding: 8px 10px;
+  font: 400 13.5px 'IBM Plex Sans';
+  color: var(--ink);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.budget-input:hover {
+  border-color: var(--line);
+  background: #fff;
+}
+
+.budget-input:focus {
+  border-color: var(--ink-3);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(29, 66, 102, .09);
+}
+
+/* Number input — right-aligned, monospace for readability */
+.budget-input.num {
+  text-align: right;
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Currency input wrapper with ₦ prefix */
+.budget-money {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 150px;
+}
+
+.budget-money::before {
+  content: '₦';
+  position: absolute;
+  left: 10px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--slate-2);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.budget-money .budget-input {
+  padding-left: 26px;
+}
+
+.budget-money .budget-input:focus {
+  padding-left: 26px;
+}
+
+/* Select styled like the inputs */
+.budget-select {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--r);
+  padding: 8px 10px;
+  font: 400 13.5px 'IBM Plex Sans';
+  color: var(--ink);
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A9AAA' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.budget-select:hover {
+  border-color: var(--line);
+  background-color: #fff;
+}
+
+.budget-select:focus {
+  border-color: var(--ink-3);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(29, 66, 102, .09);
+}
+
+/* Remove button in each row */
+.budget-remove-btn {
+  background: none;
+  border: 0;
+  padding: 6px;
+  border-radius: var(--r);
+  color: var(--slate-2);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  font-size: 12px;
+}
+
+.budget-remove-btn:hover {
+  background: #FDF6F5;
+  color: var(--rose);
+}
+
+.budget-remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------- category quick-add row ---------- */
+
+.budget-quickadd {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #FAFCFD 0%, var(--surface) 100%);
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+}
+
+.budget-quickadd-label {
+  font-size: 11px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--slate-2);
+  font-weight: 600;
+}
+
+.budget-quickadd .budget-select {
+  max-width: 320px;
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.budget-quickadd .budget-select:hover {
+  border-color: var(--slate-2);
+}
+
+/* ---------- total row ---------- */
+
+.budget-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 16px;
+  margin-top: 12px;
+  background: linear-gradient(90deg, rgba(184, 134, 43, .08), transparent 70%);
+  border-left: 3px solid var(--brass);
+  border-radius: 6px;
+}
+
+.budget-total-row span {
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--slate-2);
+  font-weight: 600;
+}
+
+.budget-total-row b {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* ---------- empty state ---------- */
+
+.budget-empty {
+  padding: 32px 20px;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 9px;
+  color: var(--slate);
+  background: #FAFCFD;
+}
+
+.budget-empty b {
+  display: block;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 700px) {
+  .budget-lines-table thead {
+    display: none;
+  }
+
+  .budget-lines-table tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .budget-lines-table tbody td {
+    display: block;
+    border: 0;
+    padding: 4px 0;
+  }
+
+  .budget-lines-table tbody td:first-child,
+  .budget-lines-table tbody td:last-child {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .budget-lines-table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--slate-2);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+}
 @media (max-width: 700px) {
   .fin-balance-summary {
     grid-template-columns: 1fr;

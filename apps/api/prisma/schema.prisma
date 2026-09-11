@@ -598,6 +598,7 @@ model Account {
   banks     Bank[]
   expenseCategories ExpenseCategory[]
   vendors   Vendor[]   // ← ADD THIS LINE
+  payrollMappings PayrollAccountMapping[]  // ← Add this
 
   @@index([code])
   @@index([parentId])
@@ -675,6 +676,7 @@ enum VoucherStatus {
   DRAFT
   PENDING_APPROVAL
   APPROVED
+  POSTED
   PAID
   REJECTED
 }
@@ -750,13 +752,20 @@ model VoucherApproval {
 }
 
 model ExpenseCategory {
-  id       String    @id @default(uuid())
-  code     String    @unique
-  name     String // Startup cost, Utilities, Professional fees
-  accountId String?
-  account     Account? @relation(fields: [accountId], references: [id])  // ← ADD THIS
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  description String?
+  accountId   String?
+  account     Account? @relation(fields: [accountId], references: [id])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   vouchers    Voucher[]
+  budgetLines BudgetLine[]
+
+  @@index([accountId])
 }
 
 // Vendor
@@ -780,6 +789,7 @@ model Vendor {
   updatedAt       DateTime @updatedAt
 
   vouchers        Voucher[]
+ 
 
   @@index([code])
   @@index([name])
@@ -792,6 +802,75 @@ enum VendorType {
   CUSTOMER
   CONSULTANT
   OTHER
+}
+// ============================================================
+// Budget
+// ============================================================
+
+enum BudgetStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+model Budget {
+  id              String        @id @default(uuid())
+  name            String
+  year            Int
+  status          BudgetStatus  @default(DRAFT)
+  totalBudget     Decimal       @default(0) @db.Decimal(19,4)
+  notes           String?
+  createdById     String?
+  activatedAt     DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  lines           BudgetLine[]
+
+  @@unique([year, name])
+  @@index([year])
+  @@index([status])
+}
+
+model BudgetLine {
+  id                String          @id @default(uuid())
+  budgetId          String
+  budget            Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  categoryId        String
+  category          ExpenseCategory @relation(fields: [categoryId], references: [id])
+  itemName          String
+  amountBudgeted    Decimal         @db.Decimal(19,4)
+  amountSpent       Decimal         @default(0) @db.Decimal(19,4)
+  amountCommitted   Decimal         @default(0) @db.Decimal(19,4)
+  notes             String?
+  sortOrder         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([budgetId, categoryId])
+  @@index([budgetId])
+  @@index([categoryId])
+}
+
+model PayrollAccountMapping {
+  id          String             @id @default(uuid())
+  key         PayrollAccountKey  @unique
+  accountId   String
+  account     Account            @relation(fields: [accountId], references: [id])
+  description String?
+  updatedAt   DateTime           @updatedAt
+  updatedById String?
+}
+
+enum PayrollAccountKey {
+  SALARIES_EXPENSE
+  PENSION_EXPENSE_EMPLOYER
+  NET_SALARIES_PAYABLE
+  PAYE_PAYABLE
+  PENSION_PAYABLE
+  NHF_PAYABLE
+  // Future: LOAN_REPAYMENT, OTHER_DEDUCTIONS_PAYABLE
 }
 
 

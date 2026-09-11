@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
+import { PayrollSettingsService } from './payroll-settings.service';
 import Decimal from 'decimal.js';
 
 /**
@@ -16,34 +17,21 @@ import Decimal from 'decimal.js';
  *                                             -----------  -----------
  *                                              210,600.00   210,600.00
  *
+ * The accounts used are configurable via PayrollSettingsService. If no
+ * mapping has been set, it falls back to the seeded chart of accounts.
+ *
  * Note the accrual: nothing touches the bank here. Payment is a second,
  * separate entry (Dr net salaries payable / Cr bank) raised when the
  * transfers actually clear, and the statutory remittances to the PFA and
- * the tax authority are two more. That separation is what lets you see, at
- * any moment, what you owe but have not yet remitted — which is exactly
- * the number that gets a company into trouble when it is only tracked in
- * a spreadsheet.
+ * the tax authority are two more.
  */
-
-export const PAYROLL_ACCOUNTS = {
-  SALARIES_EXPENSE: '6100',
-  PENSION_EXPENSE_EMPLOYER: '6110',
-  NET_SALARIES_PAYABLE: '2200',
-  PAYE_PAYABLE: '2210',
-  PENSION_PAYABLE: '2220',
-  NHF_PAYABLE: '2230',
-} as const;
-
-interface Line {
-  code: string;
-  debit: Decimal;
-  credit: Decimal;
-  narration: string;
-}
 
 @Injectable()
 export class PayrollPostingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private settings: PayrollSettingsService,
+  ) {}
 
   async post(runId: string, actorId: string) {
     const run = await this.prisma.payrollRun.findUniqueOrThrow({
@@ -72,39 +60,49 @@ export class PayrollPostingService {
 
     const period = `${String(run.periodMonth).padStart(2, '0')}/${run.periodYear}`;
 
+    // Resolve the account IDs to use — configured mappings or seeded defaults
+    const accounts = await this.settings.getResolvedAccounts();
+
+    interface Line {
+      accountId: string;
+      debit: Decimal;
+      credit: Decimal;
+      narration: string;
+    }
+
     const lines: Line[] = [
       {
-        code: PAYROLL_ACCOUNTS.SALARIES_EXPENSE,
+        accountId: accounts.SALARIES_EXPENSE,
         debit: gross,
         credit: new Decimal(0),
         narration: `Gross salaries ${period}`,
       },
       {
-        code: PAYROLL_ACCOUNTS.PENSION_EXPENSE_EMPLOYER,
+        accountId: accounts.PENSION_EXPENSE_EMPLOYER,
         debit: pensionEmployer,
         credit: new Decimal(0),
         narration: `Employer pension contribution ${period}`,
       },
       {
-        code: PAYROLL_ACCOUNTS.PAYE_PAYABLE,
+        accountId: accounts.PAYE_PAYABLE,
         debit: new Decimal(0),
         credit: paye,
         narration: `PAYE withheld ${period}`,
       },
       {
-        code: PAYROLL_ACCOUNTS.PENSION_PAYABLE,
+        accountId: accounts.PENSION_PAYABLE,
         debit: new Decimal(0),
         credit: pensionEmployee.plus(pensionEmployer),
         narration: `Pension payable to PFA ${period}`,
       },
       {
-        code: PAYROLL_ACCOUNTS.NHF_PAYABLE,
+        accountId: accounts.NHF_PAYABLE,
         debit: new Decimal(0),
         credit: nhf,
         narration: `NHF withheld ${period}`,
       },
       {
-        code: PAYROLL_ACCOUNTS.NET_SALARIES_PAYABLE,
+        accountId: accounts.NET_SALARIES_PAYABLE,
         debit: new Decimal(0),
         credit: net,
         narration: `Net salaries payable ${period}`,
@@ -124,14 +122,28 @@ export class PayrollPostingService {
       );
     }
 
-    const accounts = await this.prisma.account.findMany({
-      where: { code: { in: lines.map((l) => l.code) } },
+    // Verify all accounts still exist and are active
+    const accountIds = lines.map((l) => l.accountId);
+    const foundAccounts = await this.prisma.account.findMany({
+      where: { id: { in: accountIds } },
+      select: { id: true, code: true, name: true, isActive: true },
     });
-    const byCode = new Map(accounts.map((a) => [a.code, a.id]));
-    const missing = lines.filter((l) => !byCode.has(l.code)).map((l) => l.code);
+
+    const foundIds = new Set(foundAccounts.map((a) => a.id));
+    const missing = accountIds.filter((id) => !foundIds.has(id));
     if (missing.length) {
       throw new BadRequestException(
-        `Chart of accounts is missing: ${missing.join(', ')}. Run the account seed.`,
+        `Some payroll accounts no longer exist: ${missing.join(', ')}. ` +
+        `Please reconfigure the payroll account mappings in Finance settings.`,
+      );
+    }
+
+    const inactive = foundAccounts.filter((a) => !a.isActive);
+    if (inactive.length) {
+      const names = inactive.map((a) => `${a.code} - ${a.name}`).join(', ');
+      throw new BadRequestException(
+        `These payroll accounts are inactive: ${names}. ` +
+        `Activate them or remap payroll to active accounts.`,
       );
     }
 
@@ -162,7 +174,7 @@ export class PayrollPostingService {
           postedAt: new Date(),
           lines: {
             create: lines.map((l, i) => ({
-              accountId: byCode.get(l.code)!,
+              accountId: l.accountId,
               debit: l.debit.toFixed(4),
               credit: l.credit.toFixed(4),
               narration: l.narration,

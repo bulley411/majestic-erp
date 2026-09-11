@@ -1161,3 +1161,211 @@ export const postVoucher = (id: string) =>
 export const deleteVoucher = (id: string) =>
   api<{ ok: boolean }>(`/vouchers/${id}`, { method: 'DELETE' });
 
+/* ------------------------------ budgets ----------------------------- */
+
+export type BudgetStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+
+export interface BudgetLine {
+  id: string;
+  budgetId: string;
+  categoryId: string;
+  category: {
+    id: string;
+    code: string;
+    name: string;
+    account: { id: string; code: string; name: string } | null;
+  };
+  itemName: string;
+  amountBudgeted: string;
+  amountSpent: string;
+  amountCommitted: string;
+  notes: string | null;
+  sortOrder: number;
+}
+
+export interface Budget {
+  id: string;
+  name: string;
+  year: number;
+  status: BudgetStatus;
+  totalBudget: string;
+  notes: string | null;
+  createdById: string | null;
+  activatedAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lines?: BudgetLine[];
+  totals?: {
+    budgeted: string;
+    spent: string;
+    committed: string;
+    remaining: string;
+  };
+  _count?: { lines: number };
+}
+
+export interface BudgetSummaryLine {
+  id: string;
+  itemName: string;
+  categoryName: string;
+  categoryCode: string;
+  accountCode: string | null;
+  accountName: string | null;
+  budgeted: string;
+  spent: string;
+  committed: string;
+  remaining: string;
+  variance: string;
+  percentUsed: string;
+  isOverBudget: boolean;
+}
+
+export interface BudgetSummary {
+  year: number;
+  budget: {
+    id: string;
+    name: string;
+    status: BudgetStatus;
+    totalBudget: string;
+    totalSpent: string;
+    totalCommitted: string;
+    totalRemaining: string;
+    percentUsed: string;
+  } | null;
+  lines?: BudgetSummaryLine[];
+  message?: string;
+}
+
+export interface BudgetCheckResult {
+  hasBudget: boolean;
+  exceeded: boolean;
+  remaining: string;
+  budgeted: string;
+  spent: string;
+  committed: string;
+}
+
+// --- API functions ---
+
+export const listBudgets = (year?: number, status?: string) => {
+  const params = new URLSearchParams();
+  if (year) params.append('year', String(year));
+  if (status) params.append('status', status);
+  const query = params.toString();
+  return api<Budget[]>(`/budgets${query ? `?${query}` : ''}`);
+};
+
+export const getCurrentBudget = () => api<Budget | null>('/budgets/current');
+
+export const getBudget = (id: string) => api<Budget>(`/budgets/${id}`);
+
+export const getBudgetSummary = (year?: number) => {
+  const params = year ? `?year=${year}` : '';
+  return api<BudgetSummary>(`/budgets/summary${params}`);
+};
+
+export const getVarianceReport = (year?: number) => {
+  const params = year ? `?year=${year}` : '';
+  return api<BudgetSummary>(`/budgets/variance-report${params}`);
+};
+
+export const getBudgetVsActual = (id: string) =>
+  api<BudgetSummary>(`/budgets/${id}/vs-actual`);
+
+export const getMonthlyAnalysis = (year?: number) => {
+  const params = year ? `?year=${year}` : '';
+  return api<{ year: number; months: any[] }>(`/budgets/monthly-analysis${params}`);
+};
+
+export const createBudget = (data: Record<string, unknown>) =>
+  api<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) });
+
+export const updateBudget = (id: string, data: Record<string, unknown>) =>
+  api<Budget>(`/budgets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+export const setBudgetStatus = (id: string, status: BudgetStatus) =>
+  api<Budget>(`/budgets/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+
+export const deleteBudget = (id: string) =>
+  api<{ ok: boolean }>(`/budgets/${id}`, { method: 'DELETE' });
+
+export const checkVoucherBudget = (categoryId: string, amount: number, date: string) =>
+  api<BudgetCheckResult>(
+    `/vouchers/check-budget/${categoryId}?amount=${amount}&date=${date}`,
+  );
+
+// --- Expense Categories ---
+
+export interface ExpenseCategory {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  accountId: string | null;
+  account: { id: string; code: string; name: string } | null;
+  isActive: boolean;
+}
+
+export const listExpenseCategories = (includeInactive = false) =>
+  api<ExpenseCategory[]>(
+    `/expense-categories${includeInactive ? '?includeInactive=true' : ''}`,
+  );
+
+export const createExpenseCategory = (data: Record<string, unknown>) =>
+  api<ExpenseCategory>('/expense-categories', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const updateExpenseCategory = (id: string, data: Record<string, unknown>) =>
+  api<ExpenseCategory>(`/expense-categories/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+
+export const deleteExpenseCategory = (id: string) =>
+  api<{ ok: boolean }>(`/expense-categories/${id}`, { method: 'DELETE' });
+
+/* ------------------------------ banks ----------------------------- */
+
+export interface Bank {
+  id: string;
+  name: string;
+  accountNumber: string | null;
+  accountId: string;
+  account: { id: string; code: string; name: string } | null;
+  isActive?: boolean;
+  _count?: { vouchers: number };
+}
+
+export const listBanks = () => api<Bank[]>('/banks');
+export const createBank = (data: Record<string, unknown>) =>
+  api<Bank>('/banks', { method: 'POST', body: JSON.stringify(data) });
+export const updateBank = (id: string, data: Record<string, unknown>) =>
+  api<Bank>(`/banks/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deleteBank = (id: string) =>
+  api<{ ok: boolean }>(`/banks/${id}`, { method: 'DELETE' });
+
+export interface PayrollMapping {
+  key: string;
+  accountId: string | null;
+  accountCode: string;
+  accountName: string;
+  accountType: string;
+  isDefault: boolean;
+  meta: { label: string; description: string; expectedType: string };
+}
+
+export const getPayrollMappings = () =>
+  api<Record<string, PayrollMapping>>('/payroll/settings/accounts');
+
+export const setPayrollMapping = (key: string, accountId: string) =>
+  api<PayrollMapping>(`/payroll/settings/accounts/${key}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ accountId }),
+  });
+

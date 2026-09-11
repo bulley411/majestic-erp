@@ -11,6 +11,8 @@ import Payroll from './pages/Payroll';
 import Ledger from './pages/Ledger';
 import Vendors from './pages/Vendors';
 import Vouchers from './pages/Vouchers';
+import Budgets from './pages/Budgets';
+import FinanceSettings from './pages/FinanceSettings';import Dashboard from './pages/Dashboard';
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -49,10 +51,13 @@ function Routed() {
       {page === 'people' ? <People />
         : page === 'attendance' ? <Attendance />
         : page === 'payroll' ? <Payroll />
+        :page === 'budgets' ? <Budgets />
         : page === 'ledger' ? <Ledger />
         :page === 'vendors' ? <Vendors /> 
         : page === 'vouchers' ? <Vouchers />
+        :page === 'dashboard' ? <Dashboard />
         : page === 'hr-settings' ? <HrSettings />
+        :page === 'finance-settings' ? <FinanceSettings />
         : page === 'users' ? <Users />
         : <Placeholder title={TITLES[page] ?? 'Module'} />}
     </Shell>
